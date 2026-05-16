@@ -4,18 +4,10 @@ export type BackupImportMode = 'replace' | 'merge';
 export interface TrackerItem {
   id: string;
   title: string;
-  category: string;
   deliveryReceiptDate?: string;
   images?: string[];
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  color: string;
-  icon?: string;
 }
 
 export interface StoredImage {
@@ -64,7 +56,6 @@ export interface BackupPayload {
   version: 1;
   exportedAt: string;
   trackers: TrackerItem[];
-  categories: Category[];
   images: Array<Omit<StoredImage, 'blob'> & { blobBase64: string }>;
   settings: AppSettings | null;
   activities: ActivityLog[];
@@ -72,7 +63,6 @@ export interface BackupPayload {
 
 export interface TrackerFilters {
   search: string;
-  category: string | 'All';
   sort: TrackerSortMode;
 }
 

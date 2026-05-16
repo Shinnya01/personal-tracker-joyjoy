@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { CalendarDays, FilePenLine, Save } from 'lucide-vue-next';
-import type { Category, StoredImage, TrackerItem } from '../../types/tracker';
+import type { StoredImage, TrackerItem } from '../../types/tracker';
 import ImageUploader from './ImageUploader.vue';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
@@ -9,7 +9,6 @@ import Input from '../ui/Input.vue';
 
 interface FormModel {
   title: string;
-  category: string;
   deliveryReceiptDate: string;
 }
 
@@ -18,12 +17,11 @@ export interface TrackerSubmitPayload extends Omit<TrackerItem, 'id' | 'createdA
   keepImageIds: string[];
 }
 
-const props = defineProps<{ tracker?: TrackerItem | null; categories: Category[]; existingImages?: StoredImage[] }>();
+const props = defineProps<{ tracker?: TrackerItem | null; existingImages?: StoredImage[] }>();
 const emit = defineEmits<{ submit: [payload: TrackerSubmitPayload]; removeExisting: [string] }>();
 
 const model = reactive<FormModel>({
   title: '',
-  category: props.categories[0]?.id ?? 'general',
   deliveryReceiptDate: '',
 });
 
@@ -35,7 +33,6 @@ watch(
   (tracker) => {
     if (!tracker) return;
     model.title = tracker.title;
-    model.category = tracker.category;
     model.deliveryReceiptDate = tracker.deliveryReceiptDate ? tracker.deliveryReceiptDate.slice(0, 10) : '';
     keepImageIds.value = [...(tracker.images ?? [])];
   },
@@ -47,7 +44,6 @@ const trackerId = computed(() => props.tracker?.id ?? 'draft');
 const submit = () => {
   emit('submit', {
     title: model.title.trim(),
-    category: model.category,
     deliveryReceiptDate: model.deliveryReceiptDate ? new Date(model.deliveryReceiptDate).toISOString() : undefined,
     images: addedImages.value,
     keepImageIds: keepImageIds.value,
@@ -64,18 +60,18 @@ const removeExisting = (id: string) => {
   <form class="form-stack" @submit.prevent="submit">
     <Card class="grid gap-7 rounded-4xl p-6">
       <label class="grid gap-3">
-        <span class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">
           <FilePenLine :size="22" class="text-rose-500" />
           Title
         </span>
-        <Input v-model="model.title" class="h-[72px] rounded-3xl border-slate-200 bg-slate-50 px-6 text-lg placeholder:text-slate-400" placeholder="What are you tracking?" />
+        <Input v-model="model.title" class="h-[56px] rounded-2xl border-slate-200 bg-slate-50 px-4 text-sm placeholder:text-slate-400 md:h-[72px] md:rounded-3xl md:px-6 md:text-lg" placeholder="What are you tracking?" />
       </label>
       <label class="grid gap-3">
-        <span class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">
           <CalendarDays :size="22" class="text-rose-500" />
           Delivery Receipt Date
         </span>
-        <Input v-model="model.deliveryReceiptDate" type="date" class="h-[72px] rounded-3xl border-slate-200 bg-slate-50 px-6 text-lg text-slate-700" />
+        <Input v-model="model.deliveryReceiptDate" type="date" class="h-[56px] rounded-2xl border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 md:h-[72px] md:rounded-3xl md:px-6 md:text-lg" />
       </label>
     </Card>
 
@@ -85,7 +81,7 @@ const removeExisting = (id: string) => {
       type="submit"
       variant="default"
       size="lg"
-      class="h-[60px] w-full rounded-3xl border-none bg-gradient-to-r from-rose-400 to-fuchsia-500 text-lg font-semibold"
+      class="h-[56px] w-full rounded-2xl border-none bg-gradient-to-r from-rose-400 to-fuchsia-500 text-sm font-semibold md:h-[60px] md:rounded-3xl md:text-lg"
     >
       <Save :size="18" />
       Save Tracker

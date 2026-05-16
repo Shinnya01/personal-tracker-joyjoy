@@ -19,8 +19,10 @@ onMounted(() => {
 });
 
 const greetingText = computed(() => {
+  const hour = new Date().getHours();
+  const dayGreeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
   const name = settingsStore.settings.displayName?.trim();
-  return name ? `Good morning, ${name}` : 'Good morning';
+  return name ? `${dayGreeting}, ${name}` : dayGreeting;
 });
 
 const overviewItems = computed(() => [
@@ -108,7 +110,7 @@ const timeAgo = (iso: string) => {
 
     <Card class="flex items-center justify-between gap-3 rounded-3xl p-6">
       <div class="flex items-center gap-3">
-        <div class="grid h-10 w-10 place-items-center rounded-2xl bg-rose-100 text-rose-500">
+        <div class="grid h-10 w-10 place-items-center rounded-full bg-rose-100 text-rose-500">
           <PlusCircle :size="20" />
         </div>
         <div>
@@ -117,7 +119,7 @@ const timeAgo = (iso: string) => {
         </div>
       </div>
       <RouterLink to="/trackers/new">
-        <Button size="lg" class="border-none bg-gradient-to-br from-rose-400 to-rose-500 !px-4 !py-2"><Plus/> Add Tracker</Button>
+        <Button size="lg" class="border-none bg-gradient-to-br from-rose-400 to-rose-500 !px-4 !py-2"><Plus/> Add</Button>
       </RouterLink>
     </Card>
   </section>

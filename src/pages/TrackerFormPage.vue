@@ -48,13 +48,11 @@ const removeExisting = async (imageId: string) => {
   <section class="flex flex-col gap-5">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-5">
-      <p class="text-sm font-semibold text-rose-500">{{ trackerId ? 'Edit tracker' : 'New tracker' }}</p>
       <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">{{ trackerId ? 'Update tracker' : 'Create a tracker' }}</CardTitle>
       <CardDescription class="mt-3 text-sm text-slate-500">{{ trackerId ? 'Update details, receipt date, and images.' : 'Add details, receipt date, and images.' }}</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
     </Card>
-    <TrackerForm :tracker="tracker" :categories="trackerStore.categories" :existing-images="existingImages" @submit="handleSubmit" @remove-existing="removeExisting" />
+    <TrackerForm :tracker="tracker" :existing-images="existingImages" @submit="handleSubmit" @remove-existing="removeExisting" />
   </section>
 </template>
-

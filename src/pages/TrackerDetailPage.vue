@@ -8,7 +8,6 @@ import type { StoredImage } from '../types/tracker';
 import { useUiStore } from '../stores/uiStore';
 import Card from '../components/ui/Card.vue';
 import Button from '../components/ui/Button.vue';
-import Badge from '../components/ui/Badge.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -37,7 +36,6 @@ const remove = async () => {
   <section v-if="tracker" class="stack stack-lg detail-page">
     <Card class="panel-card">
       <h1 class="detail-title">{{ tracker.title }}</h1>
-      <div class="chip-row"><Badge>{{ tracker.category }}</Badge></div>
       <p v-if="tracker.deliveryReceiptDate" class="meta-line"><CalendarClock :size="14" /> Delivery Receipt: {{ new Date(tracker.deliveryReceiptDate).toLocaleDateString() }}</p>
     </Card>
 

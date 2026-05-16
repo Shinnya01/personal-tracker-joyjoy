@@ -27,23 +27,23 @@ const openPicker = () => {
 </script>
 
 <template>
-  <Card class="grid gap-4 rounded-4xl p-6">
-    <div class="flex items-center gap-2 text-lg font-semibold text-slate-900">
-      <ImagePlus :size="20" class="text-rose-500" />
+  <Card class="grid gap-3 rounded-3xl p-5">
+    <div class="flex items-center gap-2 text-base font-semibold text-slate-900">
+      <ImagePlus :size="18" class="text-rose-500" />
       Images
     </div>
-    <div class="rounded-3xl border-2 border-dashed border-rose-200 bg-rose-50/20 p-6 text-center">
-      <div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-rose-100 text-rose-500">
-        <ImagePlus :size="30" />
+    <div class="rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/20 p-5 text-center">
+      <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rose-100 text-rose-500">
+        <ImagePlus :size="24" />
       </div>
-      <p class="mt-4 text-2xl font-bold text-slate-900">Add images</p>
-      <p class="mt-1 text-lg text-slate-500">Tap to browse or drag and drop</p>
-      <Button type="button" size="sm" class="mt-4 rounded-2xl border-none bg-rose-100 px-6 py-2 text-base font-semibold text-rose-600 shadow-none" @click="openPicker">
+      <p class="mt-3 text-xl font-bold text-slate-900">Add images</p>
+      <p class="mt-1 text-sm text-slate-500">Tap to browse or drag and drop</p>
+      <Button type="button" size="sm" class="mt-3 rounded-xl border-none bg-rose-100 px-5 py-1.5 text-sm font-semibold text-rose-600 shadow-none" @click="openPicker">
         Browse files
       </Button>
-      <input ref="fileInput" type="file" accept="image/*" capture="environment" multiple class="hidden" @change="onFiles" />
+      <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="onFiles" />
     </div>
-    <p class="text-base text-slate-500">You can add multiple images.</p>
+    <p class="text-sm text-slate-500">You can add multiple images.</p>
 
     <div class="image-grid image-grid-large">
       <div v-for="img in existing" :key="img.id" class="image-item">

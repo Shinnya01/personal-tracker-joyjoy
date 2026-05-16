@@ -1,6 +1,5 @@
 ﻿import { db } from '../db';
 import { activityRepo } from '../db/repositories/activityRepo';
-import { categoryRepo } from '../db/repositories/categoryRepo';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { settingsRepo } from '../db/repositories/settingsRepo';
 import { trackerRepo } from '../db/repositories/trackerRepo';
@@ -24,9 +23,8 @@ const base64ToBlob = (base64: string, mimeType: string) => {
 
 export const backupService = {
   async exportPayload(): Promise<BackupPayload> {
-    const [trackers, categories, images, settings, activities] = await Promise.all([
+    const [trackers, images, settings, activities] = await Promise.all([
       trackerRepo.list(),
-      categoryRepo.list(),
       imageRepo.list(),
       settingsRepo.get(),
       activityRepo.listRecent(500),
@@ -48,7 +46,6 @@ export const backupService = {
       version: 1,
       exportedAt: nowIso(),
       trackers,
-      categories,
       images: serializedImages,
       settings: settings ?? null,
       activities,
@@ -66,13 +63,12 @@ export const backupService = {
       blob: base64ToBlob(img.blobBase64, img.type),
     }));
 
-    await db.transaction('rw', [db.trackers, db.categories, db.images, db.settings, db.activities], async () => {
+    await db.transaction('rw', [db.trackers, db.images, db.settings, db.activities], async () => {
       if (mode === 'replace') {
-        await Promise.all([trackerRepo.clear(), categoryRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+        await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
       }
 
       await trackerRepo.bulkPut(payload.trackers);
-      await categoryRepo.bulkPut(payload.categories);
       await imageRepo.bulkPut(images);
       if (payload.settings) await settingsRepo.put(payload.settings);
       await activityRepo.bulkPut([
@@ -88,8 +84,8 @@ export const backupService = {
   },
 
   async clearAllData(resetSettings = false) {
-    await db.transaction('rw', [db.trackers, db.categories, db.images, db.activities, db.settings], async () => {
-      await Promise.all([trackerRepo.clear(), categoryRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+    await db.transaction('rw', [db.trackers, db.images, db.activities, db.settings], async () => {
+      await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
       if (resetSettings) {
         await settingsRepo.clear();
       }
