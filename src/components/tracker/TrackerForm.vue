@@ -19,7 +19,7 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from 'radix-vue';
-import { parseDate, type DateValue } from '@internationalized/date';
+import { parseDate } from '@internationalized/date';
 import type { StoredImage, TrackerItem } from '../../types/tracker';
 import ImageUploader from './ImageUploader.vue';
 import Card from '../ui/Card.vue';
@@ -48,7 +48,7 @@ const keepImageIds = ref<string[]>([]);
 const showDateWarning = ref(false);
 const isImagesProcessing = ref(false);
 const pickerOpen = ref(false);
-const pickerValue = ref<DateValue | undefined>(undefined);
+const pickerValue = ref<any>(undefined);
 
 watch(
   () => props.tracker,
@@ -82,7 +82,7 @@ watch(
 
 watch(pickerValue, (value) => {
   if (!value) return;
-  model.deliveryReceiptDate = value.toString();
+  model.deliveryReceiptDate = String(value.toString());
   showDateWarning.value = false;
   pickerOpen.value = false;
 });
