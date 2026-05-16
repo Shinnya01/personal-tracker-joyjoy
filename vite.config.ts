@@ -53,6 +53,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        globIgnores: ['**/icons/source.png'],
         navigateFallback: '/offline.html',
       },
     }),
