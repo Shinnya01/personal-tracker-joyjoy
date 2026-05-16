@@ -7,6 +7,7 @@ import Card from '../ui/Card.vue';
 
 const props = defineProps<{ tracker: TrackerItem }>();
 const thumbUrl = ref<string | null>(null);
+const imageCount = ref(0);
 let activeThumbUrl: string | null = null;
 
 const timeAgoPh = (iso: string) => {
@@ -38,6 +39,7 @@ watch(
 
     thumbUrl.value = null;
     const images = await imageRepo.listByTrackerId(trackerId);
+    imageCount.value = images.length;
     const image = images[0];
     if (!image?.blob) return;
 
@@ -65,12 +67,20 @@ onBeforeUnmount(() => {
           <span>({{ formatDateLong(props.tracker.updatedAt) }})</span>
         </div>
       </div>
-      <img v-if="thumbUrl" :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" />
-      <div v-else class="tracker-thumb tracker-thumb-box tracker-thumb-placeholder">{{ props.tracker.images?.length ? 'IMG' : 'TXT' }}</div>
+      <div v-if="thumbUrl" class="relative">
+        <img :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" />
+        <div
+          v-if="imageCount > 1"
+          class="absolute inset-0 grid place-items-center rounded-[inherit] bg-black/40 text-sm font-bold text-white"
+        >
+          +{{ imageCount - 1 }}
+        </div>
+      </div>
+      <div v-else class="tracker-thumb tracker-thumb-box tracker-thumb-placeholder">NO IMG</div>
     </div>
-    <p v-if="props.tracker.deliveryReceiptDate" class="meta-line flex flex-wrap items-center gap-1 break-words">
+    <p v-if="props.tracker.deliveryReceiptDate" class="meta-line flex min-w-0 flex-wrap items-center gap-1 overflow-hidden break-words">
       <CalendarClock :size="14" />
-      <span>Delivery Receipt: {{ new Date(props.tracker.deliveryReceiptDate).toLocaleDateString() }}</span>
+      <span class="min-w-0 whitespace-normal break-words">Delivery Receipt: {{ new Date(props.tracker.deliveryReceiptDate).toLocaleDateString() }}</span>
     </p>
   </Card>
 </template>

@@ -7,6 +7,7 @@ import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
 import { useTrackerStore } from '../stores/trackerStore';
+import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
@@ -14,6 +15,7 @@ import type { StoredImage } from '../types/tracker';
 const route = useRoute();
 const router = useRouter();
 const trackerStore = useTrackerStore();
+const uiStore = useUiStore();
 const existingImages = ref<StoredImage[]>([]);
 
 const trackerId = computed(() => (route.params.id ? String(route.params.id) : null));
@@ -25,6 +27,15 @@ onMounted(async () => {
 });
 
 const handleSubmit = async (payload: any) => {
+  const normalizedTitle = String(payload.title ?? '').trim().toLowerCase();
+  const duplicate = trackerStore.trackers.find(
+    (item) => item.id !== trackerId.value && item.title.trim().toLowerCase() === normalizedTitle,
+  );
+  if (duplicate) {
+    uiStore.pushToast({ text: 'Title already exists. Please use a different title.', tone: 'warning' });
+    return;
+  }
+
   const { images, keepImageIds, ...base } = payload;
   if (trackerId.value) {
     await trackerStore.upsertTracker({ ...base, images: [...keepImageIds, ...images.map((img: StoredImage) => img.id)] }, trackerId.value);
