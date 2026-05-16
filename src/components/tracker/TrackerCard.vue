@@ -42,9 +42,9 @@ watchEffect(async () => {
 <template>
   <Card class="tracker-card">
     <div class="tracker-card-head">
-      <div>
+      <div class="min-w-0 flex-1">
         <h3 class="tracker-title">{{ props.tracker.title }}</h3>
-        <div class="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+        <div class="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-slate-500">
           <span>Updated {{ timeAgoPh(props.tracker.updatedAt) }}</span>
           <span>({{ formatDateLong(props.tracker.updatedAt) }})</span>
         </div>
@@ -52,7 +52,10 @@ watchEffect(async () => {
       <img v-if="thumbUrl" :src="thumbUrl" alt="thumbnail" class="tracker-thumb" />
       <div v-else class="tracker-thumb tracker-thumb-placeholder">{{ props.tracker.images?.length ? 'IMG' : 'TXT' }}</div>
     </div>
-    <p v-if="props.tracker.deliveryReceiptDate" class="meta-line"><CalendarClock :size="14" /> Delivery Receipt: {{ new Date(props.tracker.deliveryReceiptDate).toLocaleDateString() }}</p>
+    <p v-if="props.tracker.deliveryReceiptDate" class="meta-line flex flex-wrap items-center gap-1 break-words">
+      <CalendarClock :size="14" />
+      <span>Delivery Receipt: {{ new Date(props.tracker.deliveryReceiptDate).toLocaleDateString() }}</span>
+    </p>
   </Card>
 </template>
 

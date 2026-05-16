@@ -59,9 +59,10 @@ const updateReminder = async (next: boolean) => { reminderEnabled.value = next; 
           <Select
             :model-value="settingsStore.settings.darkMode"
             class="h-11 rounded-2xl text-sm"
-            @update:model-value="(value) => settingsStore.setDarkMode((value as 'light' | 'dark'))"
+            @update:model-value="(value) => settingsStore.setDarkMode((value as 'system' | 'light' | 'dark'))"
           >
-            <option value="light">Light (iOS style)</option>
+            <option value="system">System (Default)</option>
+            <option value="light">Light</option>
             <option value="dark">Dark</option>
           </Select>
         </label>
