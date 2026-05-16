@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
 import TrackerFilters from '../components/tracker/TrackerFilters.vue';
 import Button from '../components/ui/Button.vue';
@@ -160,4 +159,5 @@ const showNext = () => {
     </Dialog>
   </section>
 </template>
+
 

@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { CheckCircle2, CircleDashed, ListChecks, Pen, Plus, PlusCircle, Trash2 } from 'lucide-vue-next';
+import { CheckCircle2, CircleDashed, ListChecks, Pen, Trash2 } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
-import Button from '../components/ui/Button.vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { ActivityLog } from '../types/tracker';
@@ -70,7 +69,7 @@ const activityIconClass = (type: ActivityLog['type']) => {
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-5">
         <p class="text-sm font-semibold text-[var(--accent-strong)]">{{ greetingText }}</p>
-        <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">Let’s make today count.</CardTitle>
+        <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">Let's make today count.</CardTitle>
         <CardDescription class="mt-3 text-sm text-slate-500">Stay organized and keep everything on track.</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
@@ -136,3 +135,4 @@ const activityIconClass = (type: ActivityLog['type']) => {
 
   </section>
 </template>
+
