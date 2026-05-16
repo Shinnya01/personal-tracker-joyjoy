@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { computed } from 'vue';
-import { Bell, CirclePlus, House, ListTodo, Plus, Settings } from 'lucide-vue-next';
+import { Bell, House, ListTodo, Plus, Settings } from 'lucide-vue-next';
 import { routeNames } from '../router';
 
 const route = useRoute();
