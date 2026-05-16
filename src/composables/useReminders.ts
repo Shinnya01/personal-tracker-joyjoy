@@ -11,6 +11,9 @@ export const useReminders = () => {
   let timer: number | undefined;
 
   const runCheck = async () => {
+    if (!settingsStore.isLoaded) {
+      await settingsStore.load();
+    }
     if (!settingsStore.settings.reminder.enabled) return;
     const now = Date.now();
     const due = trackerStore.trackers.filter((item) => item.deliveryReceiptDate && new Date(item.deliveryReceiptDate).getTime() <= now);

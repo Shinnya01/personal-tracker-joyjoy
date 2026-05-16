@@ -8,12 +8,8 @@ import './style.css';
 
 registerSW({
   immediate: true,
-  onNeedRefresh() {
-    console.info('Tracker update available. Refresh to apply the latest version.');
-  },
-  onOfflineReady() {
-    console.info('Tracker is ready for offline use.');
-  },
+  onNeedRefresh() {},
+  onOfflineReady() {},
 });
 
 const app = createApp(App);

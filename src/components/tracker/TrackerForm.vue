@@ -1,12 +1,11 @@
 ﻿<script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { Calendar, Tag } from 'lucide-vue-next';
+import { CalendarDays, FilePenLine, Save } from 'lucide-vue-next';
 import type { Category, StoredImage, TrackerItem } from '../../types/tracker';
 import ImageUploader from './ImageUploader.vue';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
 import Input from '../ui/Input.vue';
-import Select from '../ui/Select.vue';
 
 interface FormModel {
   title: string;
@@ -63,15 +62,34 @@ const removeExisting = (id: string) => {
 
 <template>
   <form class="form-stack" @submit.prevent="submit">
-    <Card class="form-grid premium-form-grid">
-      <label class="form-label"><span>Title</span><Input v-model="model.title" placeholder="What are you tracking?" /></label>
-      <label class="form-label"><span><Tag :size="14" /> Category</span><Select v-model="model.category"><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></Select></label>
-      <label class="form-label"><span><Calendar :size="14" /> Delivery Receipt Date</span><Input v-model="model.deliveryReceiptDate" type="date" /></label>
+    <Card class="grid gap-7 rounded-4xl p-6">
+      <label class="grid gap-3">
+        <span class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <FilePenLine :size="22" class="text-rose-500" />
+          Title
+        </span>
+        <Input v-model="model.title" class="h-[72px] rounded-3xl border-slate-200 bg-slate-50 px-6 text-lg placeholder:text-slate-400" placeholder="What are you tracking?" />
+      </label>
+      <label class="grid gap-3">
+        <span class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <CalendarDays :size="22" class="text-rose-500" />
+          Delivery Receipt Date
+        </span>
+        <Input v-model="model.deliveryReceiptDate" type="date" class="h-[72px] rounded-3xl border-slate-200 bg-slate-50 px-6 text-lg text-slate-700" />
+      </label>
     </Card>
 
     <ImageUploader :tracker-id="trackerId" :existing="existingImages" @changed="(files) => (addedImages = files)" @remove-existing="removeExisting" />
 
-    <Button type="submit" variant="default" size="lg">Save Tracker</Button>
+    <Button
+      type="submit"
+      variant="default"
+      size="lg"
+      class="h-[60px] w-full rounded-3xl border-none bg-gradient-to-r from-rose-400 to-fuchsia-500 text-lg font-semibold"
+    >
+      <Save :size="18" />
+      Save Tracker
+    </Button>
   </form>
 </template>
 

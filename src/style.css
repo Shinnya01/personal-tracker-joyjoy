@@ -321,15 +321,13 @@ a { color: inherit; text-decoration: none; }
 .activity-item {
   display: flex;
   gap: .75rem;
-  padding: .9rem 0;
+  padding: .55rem 0;
 }
 
-.activity-dot {
-  width: 10px;
-  height: 10px;
-  background: #ff5c9d;
-  border-radius: 999px;
-  margin-top: .45rem;
+.activity-icon-created {
+  color: #22c55e;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .pink-button {

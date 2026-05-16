@@ -1,11 +1,10 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { DatabaseBackup, MoonStar, ShieldCheck, Trash2 } from 'lucide-vue-next';
 import { useBackup } from '../composables/useBackup';
 import { useSettingsStore } from '../stores/settingsStore';
 import { backupService } from '../services/backupService';
 import { useTrackerStore } from '../stores/trackerStore';
-import { ensureSeedData } from '../services/seedService';
 import { useAppLock } from '../composables/useAppLock';
 import Card from '../components/ui/Card.vue';
 import Button from '../components/ui/Button.vue';
@@ -35,7 +34,7 @@ const onImport = async (event: Event) => {
 };
 
 const clearData = async () => { await backupService.clearAllData(false); await trackerStore.refresh(); };
-const resetApp = async () => { await backupService.clearAllData(true); await ensureSeedData(); await settingsStore.load(); await trackerStore.refresh(); };
+const resetApp = async () => { await backupService.clearAllData(true); await settingsStore.load(); await trackerStore.refresh(); };
 const savePin = async () => { if (pinInput.value.length < 4) return; await lock.setPin(pinInput.value); pinInput.value = ''; };
 const updateReminder = async (next: boolean) => { reminderEnabled.value = next; await settingsStore.setReminderSettings({ ...settingsStore.settings.reminder, enabled: next }); };
 </script>
@@ -70,4 +69,3 @@ const updateReminder = async (next: boolean) => { reminderEnabled.value = next; 
     </Card>
   </section>
 </template>
-

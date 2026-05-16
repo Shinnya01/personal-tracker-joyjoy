@@ -7,6 +7,7 @@ import { trackerService, type TrackerWriteInput } from '../services/trackerServi
 import type { ActivityLog, Category, TrackerItem } from '../types/tracker';
 import { useDashboardStats } from '../composables/useDashboardStats';
 import { useTrackerQuery } from '../composables/useTrackerQuery';
+import { DEFAULT_CATEGORIES } from '../utils/constants';
 
 export const useTrackerStore = defineStore('tracker', () => {
   const trackers = ref<TrackerItem[]>([]);
@@ -22,7 +23,7 @@ export const useTrackerStore = defineStore('tracker', () => {
     try {
       const [t, c, a] = await Promise.all([trackerRepo.list(), categoryRepo.list(), activityRepo.listRecent(20)]);
       trackers.value = t;
-      categories.value = c;
+      categories.value = c.length ? c : DEFAULT_CATEGORIES;
       activities.value = a;
     } finally {
       isLoading.value = false;
@@ -57,4 +58,3 @@ export const useTrackerStore = defineStore('tracker', () => {
     deleteTracker,
   };
 });
-

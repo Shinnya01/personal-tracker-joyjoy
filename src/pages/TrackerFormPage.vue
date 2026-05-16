@@ -1,9 +1,11 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { PencilLine, PlusCircle } from 'lucide-vue-next';
 import TrackerForm from '../components/tracker/TrackerForm.vue';
 import Card from '../components/ui/Card.vue';
+import CardHeader from '../components/ui/CardHeader.vue';
+import CardTitle from '../components/ui/CardTitle.vue';
+import CardDescription from '../components/ui/CardDescription.vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
@@ -43,12 +45,14 @@ const removeExisting = async (imageId: string) => {
 </script>
 
 <template>
-  <section class="stack stack-lg">
-    <Card class="panel-card">
-      <h1>{{ trackerId ? 'Edit Tracker' : 'Create Tracker' }}</h1>
-      <p class="muted">{{ trackerId ? 'Update delivery details and keep it current.' : 'Capture a new item quickly.' }}</p>
-      <p class="muted">{{ trackerId ? '' : 'Add title, category, delivery receipt date and images.' }}</p>
-      <div class="chip-row"><span class="chip chip-accent"><PencilLine v-if="trackerId" :size="12" /><PlusCircle v-else :size="12" /> {{ trackerId ? 'Editing' : 'New tracker' }}</span></div>
+  <section class="flex flex-col gap-5">
+    <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
+      <CardHeader class="relative z-10 p-5">
+      <p class="text-sm font-semibold text-rose-500">{{ trackerId ? 'Edit tracker' : 'New tracker' }}</p>
+      <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">{{ trackerId ? 'Update tracker' : 'Create a tracker' }}</CardTitle>
+      <CardDescription class="mt-3 text-sm text-slate-500">{{ trackerId ? 'Update details, receipt date, and images.' : 'Add details, receipt date, and images.' }}</CardDescription>
+      </CardHeader>
+      <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
     </Card>
     <TrackerForm :tracker="tracker" :categories="trackerStore.categories" :existing-images="existingImages" @submit="handleSubmit" @remove-existing="removeExisting" />
   </section>

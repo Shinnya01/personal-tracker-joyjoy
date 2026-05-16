@@ -37,15 +37,24 @@ export const ensureSeedData = async () => {
 
   await db.transaction('rw', db.settings, db.categories, db.trackers, db.activities, async () => {
     const now = nowIso();
+
     await categoryRepo.bulkPut(DEFAULT_CATEGORIES);
-    await trackerRepo.bulkPut(seedTrackers());
-    await settingsRepo.put({ ...DEFAULT_SETTINGS, seededAt: now, updatedAt: now });
-    await activityRepo.put({
-      id: createId(),
-      type: 'created',
-      message: 'Sample tracker data seeded.',
-      createdAt: now,
-    });
+
+    const existingTrackers = await trackerRepo.list();
+    if (!existingTrackers.length) {
+      await trackerRepo.bulkPut(seedTrackers());
+      await activityRepo.put({
+        id: createId(),
+        type: 'created',
+        message: 'Sample tracker data seeded.',
+        createdAt: now,
+      });
+    }
+
+    const nextSettings = settings
+      ? { ...settings, seededAt: settings.seededAt ?? now, updatedAt: now }
+      : { ...DEFAULT_SETTINGS, seededAt: now, updatedAt: now };
+
+    await settingsRepo.put(nextSettings);
   });
 };
-

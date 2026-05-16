@@ -8,7 +8,6 @@ import Card from './components/ui/Card.vue';
 import Button from './components/ui/Button.vue';
 import Input from './components/ui/Input.vue';
 import { useReminders } from './composables/useReminders';
-import { ensureSeedData } from './services/seedService';
 import { useTrackerStore } from './stores/trackerStore';
 import { useSettingsStore } from './stores/settingsStore';
 
@@ -20,7 +19,6 @@ useReminders();
 
 onMounted(async () => {
   await settingsStore.load();
-  await ensureSeedData();
   await trackerStore.refresh();
 });
 
@@ -44,10 +42,10 @@ const saveName = async () => {
     <Card class="dialog">
       <h3>Welcome to Tracker</h3>
       <p class="muted">What name should we call you?</p>
-      <div class="form-grid" style="margin-top:.7rem;">
+      <form class="form-grid" style="margin-top:.7rem;" @submit.prevent="saveName">
         <Input v-model="displayNameInput" placeholder="Enter your name" />
-        <Button @click="saveName">Save</Button>
-      </div>
+        <Button type="submit">Save</Button>
+      </form>
     </Card>
   </div>
 </template>
