@@ -24,7 +24,7 @@ onMounted(async () => {
   await trackerStore.refresh();
 });
 
-const shouldAskName = computed(() => !settingsStore.settings.displayName?.trim());
+const shouldAskName = computed(() => settingsStore.isLoaded && !settingsStore.settings.displayName?.trim());
 
 const saveName = async () => {
   const value = displayNameInput.value.trim();
