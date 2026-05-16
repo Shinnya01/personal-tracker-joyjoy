@@ -134,23 +134,5 @@ const activityIconClass = (type: ActivityLog['type']) => {
       <div class="text-center text-sm text-slate-500">No recent activity</div>
     </Card>
 
-    <div>
-      <h2 class="text-base font-bold text-slate-900">Quick Action</h2>
-    </div>
-
-    <Card class="flex items-center justify-between gap-3 rounded-3xl p-6">
-      <div class="flex items-center gap-3">
-        <div class="grid h-10 w-10 place-items-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-strong)]">
-          <PlusCircle :size="20" />
-        </div>
-        <div>
-        <h3 class="text-base font-bold text-slate-900">Quick Add Tracker</h3>
-        <p class="text-sm text-slate-500">Create a new tracker in seconds</p>
-        </div>
-      </div>
-      <RouterLink to="/trackers/new">
-        <Button size="lg" class="!px-4 !py-2"><Plus/> Add</Button>
-      </RouterLink>
-    </Card>
   </section>
 </template>

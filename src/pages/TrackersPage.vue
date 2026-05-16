@@ -94,7 +94,6 @@ const showNext = () => {
     <TrackerFilters v-model="trackerStore.filters" />
 
     <div class="stack">
-      <RouterLink to="/trackers/new"><Button size="lg"><Plus :size="16" /> Add tracker</Button></RouterLink>
       <Skeleton v-if="trackerStore.isLoading" class="h-24 w-full" />
       <Card v-else-if="!trackerStore.filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
       <button
