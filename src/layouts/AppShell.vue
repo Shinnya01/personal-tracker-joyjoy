@@ -1,16 +1,16 @@
 ﻿<script setup lang="ts">
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { computed } from 'vue';
-import { Bell, CirclePlus, House, ListTodo, Settings } from 'lucide-vue-next';
+import { Bell, CirclePlus, House, ListTodo, Plus, Settings } from 'lucide-vue-next';
 import { routeNames } from '../router';
 
 const route = useRoute();
 
 const tabs: Array<{ name: string; label: string; to: { name: string }; fab: boolean; icon: any }> = [
-  { name: routeNames.dashboard, label: 'Today', to: { name: routeNames.dashboard }, fab: false, icon: House },
-  { name: routeNames.trackers, label: 'Trackers', to: { name: routeNames.trackers }, fab: false, icon: ListTodo },
-  { name: routeNames.trackerNew, label: '', to: { name: routeNames.trackerNew }, fab: true, icon: CirclePlus },
-  { name: routeNames.reminders, label: 'Alerts', to: { name: routeNames.reminders }, fab: false, icon: Bell },
+  { name: routeNames.dashboard, label: 'Home', to: { name: routeNames.dashboard }, fab: false, icon: House },
+  { name: routeNames.trackers, label: 'Tracker', to: { name: routeNames.trackers }, fab: false, icon: ListTodo },
+  { name: routeNames.trackerNew, label: '', to: { name: routeNames.trackerNew }, fab: true, icon: Plus },
+  { name: routeNames.reminders, label: 'Reminders', to: { name: routeNames.reminders }, fab: false, icon: Bell },
   { name: routeNames.settings, label: 'Settings', to: { name: routeNames.settings }, fab: false, icon: Settings },
 ];
 
