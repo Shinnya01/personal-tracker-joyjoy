@@ -314,7 +314,7 @@ a { color: inherit; text-decoration: none; }
 .setting-toggle { grid-template-columns:1fr auto; align-items:center; }
 .danger-zone { border-color: color-mix(in srgb, var(--danger) 35%, var(--border) 65%); }
 
-.overlay { position:fixed; inset:0; background: rgba(16,24,39,.35); display:grid; place-items:center; padding:1rem; z-index:50; }
+.overlay { position:fixed; inset:0; background: rgba(16,24,39,.35); display:grid; place-items:center; padding:1rem; z-index:200; }
 .dialog { width:min(420px,100%); }
 .dialog-actions { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1rem; }
 
