@@ -1,7 +1,7 @@
-﻿<script setup lang="ts">
-import { onMounted } from 'vue';
+<script setup lang="ts">
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { Plus } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
 import TrackerFilters from '../components/tracker/TrackerFilters.vue';
 import Button from '../components/ui/Button.vue';
@@ -9,14 +9,76 @@ import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
+import Dialog from '../components/ui/Dialog.vue';
+import DialogContent from '../components/ui/DialogContent.vue';
 import Skeleton from '../components/ui/Skeleton.vue';
 import { useTrackerStore } from '../stores/trackerStore';
+import { imageRepo } from '../db/repositories/imageRepo';
+import type { StoredImage, TrackerItem } from '../types/tracker';
 
 const trackerStore = useTrackerStore();
+const selectedImageUrl = ref<string | null>(null);
+const imageDialogOpen = ref(false);
+const selectedImages = ref<StoredImage[]>([]);
+const selectedImageIndex = ref(0);
+const selectedTracker = ref<TrackerItem | null>(null);
+
+const objectUrls = new Map<string, string>();
 
 onMounted(() => {
   void trackerStore.refresh();
 });
+
+onBeforeUnmount(() => {
+  objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  objectUrls.clear();
+});
+
+const closeImageDialog = () => {
+  imageDialogOpen.value = false;
+  selectedImageUrl.value = null;
+  selectedImages.value = [];
+  selectedImageIndex.value = 0;
+  selectedTracker.value = null;
+};
+
+const imageUrl = (img: StoredImage) => {
+  const existing = objectUrls.get(img.id);
+  if (existing) return existing;
+  const url = URL.createObjectURL(img.blob);
+  objectUrls.set(img.id, url);
+  return url;
+};
+
+const openImageDialog = (img: StoredImage) => {
+  selectedImageUrl.value = imageUrl(img);
+  void nextTick(() => {
+    imageDialogOpen.value = true;
+  });
+};
+
+const openTrackerImagePreview = async (item: TrackerItem) => {
+  selectedTracker.value = item;
+  const trackerId = item.id;
+  const images = await imageRepo.listByTrackerId(trackerId);
+  const first = images[0];
+  if (!first) return;
+  selectedImages.value = images;
+  selectedImageIndex.value = 0;
+  openImageDialog(first);
+};
+
+const showPrev = () => {
+  if (selectedImageIndex.value <= 0) return;
+  selectedImageIndex.value -= 1;
+  selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
+};
+
+const showNext = () => {
+  if (selectedImageIndex.value >= selectedImages.value.length - 1) return;
+  selectedImageIndex.value += 1;
+  selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
+};
 </script>
 
 <template>
@@ -35,10 +97,65 @@ onMounted(() => {
       <RouterLink to="/trackers/new"><Button size="lg"><Plus :size="16" /> Add tracker</Button></RouterLink>
       <Skeleton v-if="trackerStore.isLoading" class="h-24 w-full" />
       <Card v-else-if="!trackerStore.filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
-      <RouterLink v-for="item in trackerStore.filteredTrackers" :key="item.id" :to="`/trackers/${item.id}`" class="tracker-link">
+      <button
+        v-for="item in trackerStore.filteredTrackers"
+        :key="item.id"
+        type="button"
+        class="tracker-link text-left"
+        @click="openTrackerImagePreview(item)"
+      >
         <TrackerCard :tracker="item" />
-      </RouterLink>
+      </button>
     </div>
+
+    <Dialog :open="imageDialogOpen" @update:open="(open) => !open && closeImageDialog()">
+      <DialogContent>
+        <div class="stack">
+          <div class="row-between">
+            <div>
+              <p class="text-sm font-semibold text-slate-900">{{ selectedTracker?.title }}</p>
+              <p v-if="selectedTracker?.deliveryReceiptDate" class="text-xs text-slate-500">
+                Delivery Receipt: {{ new Date(selectedTracker.deliveryReceiptDate).toLocaleDateString() }}
+              </p>
+            </div>
+            <Button size="icon" aria-label="Close image" @click="closeImageDialog">
+              <X :size="20" />
+              <span class="sr-only">Close image</span>
+            </Button>
+          </div>
+          <div class="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 rounded-2xl bg-slate-50 p-2">
+            <div class="flex justify-center">
+              <Button
+                v-if="selectedImages.length > 1"
+                size="icon"
+                :disabled="selectedImageIndex === 0"
+                aria-label="Previous image"
+                @click="showPrev"
+              >
+                <ChevronLeft :size="18" />
+              </Button>
+            </div>
+            <img
+              v-if="selectedImageUrl"
+              :src="selectedImageUrl"
+              alt="tracker image preview"
+              class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain"
+            />
+            <div class="flex justify-center">
+              <Button
+                v-if="selectedImages.length > 1"
+                size="icon"
+                :disabled="selectedImageIndex === selectedImages.length - 1"
+                aria-label="Next image"
+                @click="showNext"
+              >
+                <ChevronRight :size="18" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   </section>
 </template>
 

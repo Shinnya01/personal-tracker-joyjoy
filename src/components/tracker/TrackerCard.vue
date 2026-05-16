@@ -1,12 +1,13 @@
-﻿<script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+<script setup lang="ts">
 import { CalendarClock } from 'lucide-vue-next';
-import type { TrackerItem } from '../../types/tracker';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { imageRepo } from '../../db/repositories/imageRepo';
+import type { TrackerItem } from '../../types/tracker';
 import Card from '../ui/Card.vue';
 
 const props = defineProps<{ tracker: TrackerItem }>();
 const thumbUrl = ref<string | null>(null);
+let activeThumbUrl: string | null = null;
 
 const timeAgoPh = (iso: string) => {
   const nowInPh = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })).getTime();
@@ -27,15 +28,30 @@ const formatDateLong = (iso: string) =>
     year: 'numeric',
   });
 
-watchEffect(async () => {
-  if (thumbUrl.value) {
-    URL.revokeObjectURL(thumbUrl.value);
+watch(
+  () => props.tracker.id,
+  async (trackerId) => {
+    if (activeThumbUrl) {
+      URL.revokeObjectURL(activeThumbUrl);
+      activeThumbUrl = null;
+    }
+
     thumbUrl.value = null;
+    const images = await imageRepo.listByTrackerId(trackerId);
+    const image = images[0];
+    if (!image?.blob) return;
+
+    activeThumbUrl = URL.createObjectURL(image.blob);
+    thumbUrl.value = activeThumbUrl;
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  if (activeThumbUrl) {
+    URL.revokeObjectURL(activeThumbUrl);
+    activeThumbUrl = null;
   }
-  const imageId = props.tracker.images?.[0];
-  if (!imageId) return;
-  const image = await imageRepo.getById(imageId);
-  if (image?.blob) thumbUrl.value = URL.createObjectURL(image.blob);
 });
 </script>
 
@@ -49,8 +65,8 @@ watchEffect(async () => {
           <span>({{ formatDateLong(props.tracker.updatedAt) }})</span>
         </div>
       </div>
-      <img v-if="thumbUrl" :src="thumbUrl" alt="thumbnail" class="tracker-thumb" />
-      <div v-else class="tracker-thumb tracker-thumb-placeholder">{{ props.tracker.images?.length ? 'IMG' : 'TXT' }}</div>
+      <img v-if="thumbUrl" :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" />
+      <div v-else class="tracker-thumb tracker-thumb-box tracker-thumb-placeholder">{{ props.tracker.images?.length ? 'IMG' : 'TXT' }}</div>
     </div>
     <p v-if="props.tracker.deliveryReceiptDate" class="meta-line flex flex-wrap items-center gap-1 break-words">
       <CalendarClock :size="14" />
@@ -58,4 +74,3 @@ watchEffect(async () => {
     </p>
   </Card>
 </template>
-

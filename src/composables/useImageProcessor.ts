@@ -2,7 +2,7 @@
 import type { StoredImage } from '../types/tracker';
 import { createId, nowIso } from '../utils/date';
 
-const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
   new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) return reject(new Error('Unable to process image'));
@@ -28,8 +28,8 @@ export const useImageProcessor = () => {
 
     ctx.drawImage(bitmap, 0, 0, width, height);
 
-    const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-    const blob = await canvasToBlob(canvas, outputType, 0.8);
+    const outputType = 'image/png';
+    const blob = await canvasToBlob(canvas, outputType);
 
     const image: StoredImage = {
       id: createId(),
@@ -46,10 +46,18 @@ export const useImageProcessor = () => {
   };
 
   const processFiles = async (trackerId: string, files: FileList | null) => {
-    if (!files) return;
+    if (!files) return { added: 0, failed: [] as string[] };
+    const failed: string[] = [];
+    let added = 0;
     for (const file of Array.from(files)) {
-      await processFile(trackerId, file);
+      try {
+        await processFile(trackerId, file);
+        added += 1;
+      } catch {
+        failed.push(file.name);
+      }
     }
+    return { added, failed };
   };
 
   const removePreview = (id: string) => {

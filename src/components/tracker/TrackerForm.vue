@@ -27,6 +27,8 @@ const model = reactive<FormModel>({
 
 const addedImages = ref<StoredImage[]>([]);
 const keepImageIds = ref<string[]>([]);
+const showDateWarning = ref(false);
+const isImagesProcessing = ref(false);
 
 watch(
   () => props.tracker,
@@ -42,6 +44,12 @@ watch(
 const trackerId = computed(() => props.tracker?.id ?? 'draft');
 
 const submit = () => {
+  if (isImagesProcessing.value) return;
+  if (!model.deliveryReceiptDate) {
+    showDateWarning.value = true;
+    return;
+  }
+  showDateWarning.value = false;
   emit('submit', {
     title: model.title.trim(),
     deliveryReceiptDate: model.deliveryReceiptDate ? new Date(model.deliveryReceiptDate).toISOString() : undefined,
@@ -66,22 +74,34 @@ const removeExisting = (id: string) => {
         </span>
         <Input v-model="model.title" class="h-[56px] rounded-2xl border-slate-200 bg-slate-50 px-4 text-sm placeholder:text-slate-400 md:h-[72px] md:rounded-3xl md:px-6 md:text-lg" placeholder="What are you tracking?" />
       </label>
-      <label class="grid gap-3">
+      <label class="grid min-w-0 gap-3">
         <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">
           <CalendarDays :size="22" class="text-rose-500" />
           Delivery Receipt Date
         </span>
-        <Input v-model="model.deliveryReceiptDate" type="date" class="h-[56px] rounded-2xl border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 md:h-[72px] md:rounded-3xl md:px-6 md:text-lg" />
+        <Input
+          v-model="model.deliveryReceiptDate"
+          type="date"
+          class="h-[56px] w-full max-w-full min-w-0 overflow-hidden rounded-2xl border-slate-200 bg-slate-50 px-4 pr-10 text-[16px] leading-tight text-slate-700 md:h-[72px] md:rounded-3xl md:px-6 md:pr-12 md:text-lg"
+        />
+        <p v-if="showDateWarning" class="text-sm text-[var(--danger)]">Delivery receipt date is required.</p>
       </label>
     </Card>
 
-    <ImageUploader :tracker-id="trackerId" :existing="existingImages" @changed="(files) => (addedImages = files)" @remove-existing="removeExisting" />
+    <ImageUploader
+      :tracker-id="trackerId"
+      :existing="existingImages"
+      @changed="(files) => (addedImages = files)"
+      @processing="(value) => (isImagesProcessing = value)"
+      @remove-existing="removeExisting"
+    />
 
     <Button
       type="submit"
       variant="default"
       size="lg"
-      class="h-[56px] w-full rounded-2xl border-none bg-gradient-to-r from-rose-400 to-fuchsia-500 text-sm font-semibold md:h-[60px] md:rounded-3xl md:text-lg"
+      :disabled="isImagesProcessing"
+      class="h-[56px] w-full rounded-2xl border-none bg-gradient-to-r from-rose-400 to-fuchsia-500 text-sm font-semibold disabled:opacity-60 md:h-[60px] md:rounded-3xl md:text-lg"
     >
       <Save :size="18" />
       Save Tracker

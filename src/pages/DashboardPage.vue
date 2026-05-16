@@ -1,5 +1,5 @@
-﻿<script setup lang="ts">
-import { computed, onMounted } from 'vue';
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { CheckCircle2, CircleDashed, ListChecks, Plus, PlusCircle } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
@@ -13,13 +13,22 @@ import type { ActivityLog } from '../types/tracker';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
+const now = ref(new Date());
+let greetingTimer: number | null = null;
 
 onMounted(() => {
   void trackerStore.refresh();
+  greetingTimer = window.setInterval(() => {
+    now.value = new Date();
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (greetingTimer !== null) window.clearInterval(greetingTimer);
 });
 
 const greetingText = computed(() => {
-  const hour = new Date().getHours();
+  const hour = now.value.getHours();
   const dayGreeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
   const name = settingsStore.settings.displayName?.trim();
   return name ? `${dayGreeting}, ${name}` : dayGreeting;
@@ -53,7 +62,7 @@ const timeAgo = (iso: string) => {
   <section class="flex flex-col gap-6">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-5">
-        <p class="text-sm font-semibold text-rose-500">{{ greetingText }}</p>
+        <p class="text-sm font-semibold text-[var(--accent-strong)]">{{ greetingText }}</p>
         <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">Let’s make today count.</CardTitle>
         <CardDescription class="mt-3 text-sm text-slate-500">Stay organized and keep everything on track.</CardDescription>
       </CardHeader>
@@ -69,7 +78,7 @@ const timeAgo = (iso: string) => {
         <Card class="rounded-3xl border border-white/70 bg-white/90 p-5 backdrop-blur-sm">
           <div
             class="mb-4 grid h-14 w-14 place-items-center rounded-2xl"
-            :class="item.color === 'pink' ? 'bg-rose-100 text-rose-500' : 'bg-amber-100 text-amber-500'"
+            :class="item.color === 'pink' ? 'bg-[var(--accent-soft)] text-[var(--accent-strong)]' : 'bg-amber-100 text-amber-500'"
           >
             <component :is="item.icon" :size="22" />
           </div>
@@ -81,7 +90,7 @@ const timeAgo = (iso: string) => {
 
     <div class="flex items-center justify-between gap-3">
       <h2 class="text-base font-bold text-slate-900">Recent Activity</h2>
-      <RouterLink to="/trackers" class="text-sm font-semibold text-rose-500">See all</RouterLink>
+      <RouterLink to="/trackers" class="text-sm font-semibold text-[var(--accent-strong)]">See all</RouterLink>
     </div>
 
     <div v-if="trackerStore.activities.length" class="stack">
@@ -110,7 +119,7 @@ const timeAgo = (iso: string) => {
 
     <Card class="flex items-center justify-between gap-3 rounded-3xl p-6">
       <div class="flex items-center gap-3">
-        <div class="grid h-10 w-10 place-items-center rounded-full bg-rose-100 text-rose-500">
+        <div class="grid h-10 w-10 place-items-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-strong)]">
           <PlusCircle :size="20" />
         </div>
         <div>
@@ -119,7 +128,7 @@ const timeAgo = (iso: string) => {
         </div>
       </div>
       <RouterLink to="/trackers/new">
-        <Button size="lg" class="border-none bg-gradient-to-br from-rose-400 to-rose-500 !px-4 !py-2"><Plus/> Add</Button>
+        <Button size="lg" class="!px-4 !py-2"><Plus/> Add</Button>
       </RouterLink>
     </Card>
   </section>
