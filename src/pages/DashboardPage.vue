@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { CheckCircle2, CircleDashed, ListChecks, Plus, PlusCircle } from 'lucide-vue-next';
+import { CheckCircle2, CircleDashed, ListChecks, Pen, Plus, PlusCircle, Trash2 } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
@@ -56,6 +56,13 @@ const timeAgo = (iso: string) => {
   const days = Math.floor(hours / 24);
   return `${days} day${days > 1 ? 's' : ''} ago`;
 };
+
+const activityIconClass = (type: ActivityLog['type']) => {
+  if (type === 'created') return 'text-green-500';
+  if (type === 'updated') return 'text-amber-500';
+  if (type === 'deleted') return 'text-red-500';
+  return 'text-slate-400';
+};
 </script>
 
 <template>
@@ -100,7 +107,21 @@ const timeAgo = (iso: string) => {
         class="rounded-3xl p-4"
       >
         <div class="flex items-center gap-3 py-1.5">
-          <CheckCircle2 v-if="activity.type === 'created'" :size="24" class="shrink-0 self-center text-green-500" />
+          <CheckCircle2
+            v-if="activity.type === 'created'"
+            :size="24"
+            :class="['shrink-0 self-center', activityIconClass(activity.type)]"
+          />
+          <Pen
+            v-else-if="activity.type === 'updated'"
+            :size="24"
+            :class="['shrink-0 self-center', activityIconClass(activity.type)]"
+          />
+          <Trash2
+            v-else-if="activity.type === 'deleted'"
+            :size="24"
+            :class="['shrink-0 self-center', activityIconClass(activity.type)]"
+          />
           <div>
             <p class="text-sm font-medium text-slate-900">{{ activityText(activity) }}</p>
             <p class="text-xs text-slate-500">{{ timeAgo(activity.createdAt) }}</p>

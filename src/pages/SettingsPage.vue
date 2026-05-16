@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { DatabaseBackup, MoonStar, Trash2 } from 'lucide-vue-next';
 import { useBackup } from '../composables/useBackup';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useUiStore } from '../stores/uiStore';
 import { backupService } from '../services/backupService';
 import { useTrackerStore } from '../stores/trackerStore';
 import Card from '../components/ui/Card.vue';
@@ -17,6 +18,7 @@ import Switch from '../components/ui/Switch.vue';
 
 const backup = useBackup();
 const settingsStore = useSettingsStore();
+const uiStore = useUiStore();
 const trackerStore = useTrackerStore();
 const importMode = ref<'replace' | 'merge'>('replace');
 const reminderEnabled = ref(false);
@@ -34,8 +36,20 @@ const onImport = async (event: Event) => {
   await trackerStore.refresh();
 };
 
-const clearData = async () => { await backupService.clearAllData(false); await trackerStore.refresh(); };
-const resetApp = async () => { await backupService.clearAllData(true); await settingsStore.load(); await trackerStore.refresh(); };
+const clearData = async () => {
+  const ok = await uiStore.askConfirm('Clear data', 'This will remove all trackers, images, and activity logs.');
+  if (!ok) return;
+  await backupService.clearAllData(false);
+  await trackerStore.refresh();
+};
+
+const resetApp = async () => {
+  const ok = await uiStore.askConfirm('Reset app', 'This will remove all app data including settings. This cannot be undone.');
+  if (!ok) return;
+  await backupService.clearAllData(true);
+  await settingsStore.load();
+  await trackerStore.refresh();
+};
 const updateReminder = async (next: boolean) => { reminderEnabled.value = next; await settingsStore.setReminderSettings({ ...settingsStore.settings.reminder, enabled: next }); };
 </script>
 

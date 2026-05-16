@@ -434,4 +434,22 @@ a { color: inherit; text-decoration: none; }
 
 
 
-.ui-input[type='date'] { min-width: 0; width: 100%; max-width: 100%; }
+.ui-input[type='date'] {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.ui-input[type='date']::-webkit-date-and-time-value {
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+.ui-input[type='date']::-webkit-datetime-edit {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

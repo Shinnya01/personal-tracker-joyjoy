@@ -153,6 +153,9 @@ const showNext = () => {
               </Button>
             </div>
           </div>
+          <p v-if="selectedImages.length > 1" class="text-center text-xs font-medium text-slate-500">
+            {{ selectedImageIndex + 1 }}/{{ selectedImages.length }}
+          </p>
         </div>
       </DialogContent>
     </Dialog>
