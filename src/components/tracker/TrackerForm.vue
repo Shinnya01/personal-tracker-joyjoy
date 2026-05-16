@@ -143,11 +143,12 @@ const removeExisting = (id: string) => {
           <PopoverPortal>
             <PopoverContent
               align="start"
-              side-offset="8"
+              :side-offset="8"
               class="z-50 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-soft)]"
             >
               <CalendarRoot
                 v-model="pickerValue"
+                :multiple="false"
                 :weekday-format="'short'"
                 :fixed-weeks="true"
                 class="w-full"
