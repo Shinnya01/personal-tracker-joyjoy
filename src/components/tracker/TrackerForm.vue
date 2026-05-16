@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { CalendarDays, FilePenLine, Save } from 'lucide-vue-next';
 import type { StoredImage, TrackerItem } from '../../types/tracker';
@@ -82,7 +82,7 @@ const removeExisting = (id: string) => {
         <Input
           v-model="model.deliveryReceiptDate"
           type="date"
-          class="h-[56px] w-full max-w-full min-w-0 overflow-hidden rounded-2xl border-slate-200 bg-slate-50 px-4 pr-10 text-[16px] leading-tight text-slate-700 md:h-[72px] md:rounded-3xl md:px-6 md:pr-12 md:text-lg"
+          class="block h-[56px] w-full min-w-0 max-w-full rounded-2xl border-slate-200 bg-slate-50 px-4 pr-10 text-[16px] leading-tight text-slate-700 md:h-[72px] md:rounded-3xl md:px-6 md:pr-12 md:text-lg"
         />
         <p v-if="showDateWarning" class="text-sm text-[var(--danger)]">Delivery receipt date is required.</p>
       </label>
@@ -108,4 +108,5 @@ const removeExisting = (id: string) => {
     </Button>
   </form>
 </template>
+
 
