@@ -13,6 +13,7 @@ import CardDescription from '../components/ui/CardDescription.vue';
 import Dialog from '../components/ui/Dialog.vue';
 import DialogContent from '../components/ui/DialogContent.vue';
 import Skeleton from '../components/ui/Skeleton.vue';
+import { TransitionGroup } from 'vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
@@ -218,42 +219,49 @@ const cardStyle = (id: string) => {
     <div class="stack">
       <Skeleton v-if="trackerStore.isLoading" class="h-24 w-full" />
       <Card v-else-if="!trackerStore.filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
-      <div
-        v-for="item in trackerStore.filteredTrackers"
-        :key="item.id"
-        :ref="(el) => setCardRef(item.id, el)"
-        class="relative overflow-hidden rounded-3xl border border-[var(--border)]"
+      <TransitionGroup
+        v-else
+        name="tracker-list"
+        tag="div"
+        class="stack"
       >
-        <div class="absolute inset-y-0 right-0 grid w-1/2 grid-cols-2">
+        <div
+          v-for="item in trackerStore.filteredTrackers"
+          :key="item.id"
+          :ref="(el) => setCardRef(item.id, el)"
+          class="relative overflow-hidden rounded-3xl border border-[var(--border)]"
+        >
+          <div class="absolute inset-y-0 right-0 grid w-1/2 grid-cols-2">
+            <button
+              type="button"
+              class="grid place-items-center bg-amber-100 text-amber-700"
+              @click="editTracker(item.id)"
+            >
+              <Pencil :size="20" />
+            </button>
+            <button
+              type="button"
+              class="grid place-items-center bg-rose-100 text-rose-700"
+              @click="deleteTracker(item)"
+            >
+              <Trash2 :size="20" />
+            </button>
+          </div>
           <button
             type="button"
-            class="grid place-items-center bg-amber-100 text-amber-700"
-            @click="editTracker(item.id)"
+            class="tracker-link relative w-full text-left"
+            :style="cardStyle(item.id)"
+            @pointerdown="onPointerDown(item.id, $event)"
+            @pointermove="onPointerMove(item.id, $event)"
+            @pointerup="endDrag(item.id, $event)"
+            @pointercancel="endDrag(item.id, $event)"
+            @lostpointercapture="endDrag(item.id)"
+            @click="onCardClick(item)"
           >
-            <Pencil :size="20" />
-          </button>
-          <button
-            type="button"
-            class="grid place-items-center bg-rose-100 text-rose-700"
-            @click="deleteTracker(item)"
-          >
-            <Trash2 :size="20" />
+            <TrackerCard :tracker="item" :show-notes="true" />
           </button>
         </div>
-        <button
-          type="button"
-          class="tracker-link relative w-full text-left"
-          :style="cardStyle(item.id)"
-          @pointerdown="onPointerDown(item.id, $event)"
-          @pointermove="onPointerMove(item.id, $event)"
-          @pointerup="endDrag(item.id, $event)"
-          @pointercancel="endDrag(item.id, $event)"
-          @lostpointercapture="endDrag(item.id)"
-          @click="onCardClick(item)"
-        >
-          <TrackerCard :tracker="item" :show-notes="true" />
-        </button>
-      </div>
+      </TransitionGroup>
     </div>
 
     <Dialog :open="imageDialogOpen" @update:open="(open) => !open && closeImageDialog()">

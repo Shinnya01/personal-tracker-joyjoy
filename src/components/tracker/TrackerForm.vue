@@ -132,6 +132,7 @@ watch(pickerValue, (value) => {
     model.deliveryReceiptDate = values[0];
     model.deliveryReceiptEndDate = values[1] ?? '';
     showDateWarning.value = false;
+    if (values[1]) pickerOpen.value = false;
     return;
   }
   const picked = Array.isArray(value) ? value[0] : value;
@@ -143,6 +144,7 @@ watch(pickerValue, (value) => {
   model.deliveryReceiptDate = pickedKey;
   model.deliveryReceiptEndDate = '';
   showDateWarning.value = false;
+  pickerOpen.value = false;
 });
 
 watch(isRangeEnabled, (enabled) => {
@@ -299,7 +301,7 @@ const removeExisting = (id: string) => {
           placeholder="Add notes for this tracker"
         />
       </label>
-      <label class="grid min-w-0 gap-3">
+      <div class="grid min-w-0 gap-3">
         <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">
           <CalendarDays :size="22" class="text-rose-500" />
           Delivery Receipt Date
@@ -315,8 +317,11 @@ const removeExisting = (id: string) => {
           </PopoverTrigger>
           <PopoverPortal>
             <PopoverContent
+              side="bottom"
               align="start"
+              :align-offset="0"
               :side-offset="8"
+              :avoid-collisions="false"
               class="z-50 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-soft)]"
             >
               <div class="mb-2 flex items-center justify-end">
@@ -402,7 +407,7 @@ const removeExisting = (id: string) => {
               : 'Please select a valid delivery receipt date not beyond today.'
           }}
         </p>
-      </label>
+      </div>
     </Card>
 
     <ImageUploader

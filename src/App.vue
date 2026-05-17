@@ -52,7 +52,7 @@ const saveName = async () => {
   <AppLockGate />
   <ConfirmDialog />
   <ReminderAlertDialog />
-  <Toaster rich-colors position="top-right" />
+  <Toaster rich-colors position="bottom-right" />
 
   <div v-if="shouldAskName" class="overlay" style="z-index:100">
     <Card class="dialog">
