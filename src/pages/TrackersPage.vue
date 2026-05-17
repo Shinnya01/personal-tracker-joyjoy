@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
@@ -107,12 +108,17 @@ const deliveryReceiptLabel = (tracker: TrackerItem | null) => {
   return `${start} - ${end}`;
 };
 
-const setCardRef = (id: string, el: Element | null) => {
+const setCardRef = (id: string, el: Element | ComponentPublicInstance | null) => {
   if (!el) {
     maxOffsetById.delete(id);
     return;
   }
-  const width = (el as HTMLElement).offsetWidth;
+  const node = el instanceof Element ? el : (el.$el as Element | null);
+  if (!(node instanceof HTMLElement)) {
+    maxOffsetById.delete(id);
+    return;
+  }
+  const width = node.offsetWidth;
   maxOffsetById.set(id, width * 0.5);
 };
 
