@@ -53,6 +53,7 @@ export interface ActivityLog {
   trackerId?: string;
   type: 'created' | 'updated' | 'deleted' | 'backup_imported';
   message: string;
+  previewImageDataUrl?: string;
   createdAt: string;
 }
 

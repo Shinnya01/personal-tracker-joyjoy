@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
-import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
+import { onBeforeRouteLeave, useRouter } from 'vue-router';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
 import TrackerFilters from '../components/tracker/TrackerFilters.vue';
 import Button from '../components/ui/Button.vue';
@@ -13,15 +13,27 @@ import Dialog from '../components/ui/Dialog.vue';
 import DialogContent from '../components/ui/DialogContent.vue';
 import Skeleton from '../components/ui/Skeleton.vue';
 import { useTrackerStore } from '../stores/trackerStore';
+import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
+import { routeNames } from '../router';
 
+const router = useRouter();
 const trackerStore = useTrackerStore();
+const uiStore = useUiStore();
 const selectedImageUrl = ref<string | null>(null);
 const imageDialogOpen = ref(false);
 const selectedImages = ref<StoredImage[]>([]);
 const selectedImageIndex = ref(0);
 const selectedTracker = ref<TrackerItem | null>(null);
+const dragOffset = ref<Record<string, number>>({});
+const startXById = new Map<string, number>();
+const maxOffsetById = new Map<string, number>();
+const actionOpenId = ref<string | null>(null);
+const draggingId = ref<string | null>(null);
+const SWIPE_OPEN_THRESHOLD = 72;
+const SWIPE_CLOSE_THRESHOLD = 40;
+const draggedDistanceById = new Map<string, number>();
 
 const objectUrls = new Map<string, string>();
 
@@ -94,6 +106,95 @@ const deliveryReceiptLabel = (tracker: TrackerItem | null) => {
   const end = new Date(tracker.deliveryReceiptEndDate).toLocaleDateString();
   return `${start} - ${end}`;
 };
+
+const setCardRef = (id: string, el: Element | null) => {
+  if (!el) {
+    maxOffsetById.delete(id);
+    return;
+  }
+  const width = (el as HTMLElement).offsetWidth;
+  maxOffsetById.set(id, width * 0.5);
+};
+
+const onPointerDown = (id: string, event: PointerEvent) => {
+  draggingId.value = id;
+  startXById.set(id, event.clientX);
+  draggedDistanceById.set(id, 0);
+  (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
+  if (actionOpenId.value && actionOpenId.value !== id) {
+    dragOffset.value[actionOpenId.value] = 0;
+    actionOpenId.value = null;
+  }
+};
+
+const onPointerMove = (id: string, event: PointerEvent) => {
+  if (draggingId.value !== id) return;
+  const startX = startXById.get(id);
+  if (startX === undefined) return;
+  const maxOffset = maxOffsetById.get(id) ?? 180;
+  const base = actionOpenId.value === id ? -maxOffset : 0;
+  const deltaX = event.clientX - startX;
+  draggedDistanceById.set(id, Math.max(Math.abs(deltaX), draggedDistanceById.get(id) ?? 0));
+  const next = Math.min(0, Math.max(-maxOffset, base + deltaX));
+  dragOffset.value[id] = next;
+};
+
+const endDrag = (id: string, event?: PointerEvent) => {
+  if (draggingId.value !== id) return;
+  const maxOffset = maxOffsetById.get(id) ?? 180;
+  const offset = dragOffset.value[id] ?? 0;
+  const shouldClose = actionOpenId.value === id && offset >= -(maxOffset - SWIPE_CLOSE_THRESHOLD);
+  const shouldOpen = !shouldClose && offset <= -SWIPE_OPEN_THRESHOLD;
+  dragOffset.value[id] = shouldOpen ? -maxOffset : 0;
+  actionOpenId.value = shouldOpen ? id : null;
+  draggingId.value = null;
+  startXById.delete(id);
+  event?.currentTarget && (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+};
+
+const onCardClick = async (item: TrackerItem) => {
+  const dragged = draggedDistanceById.get(item.id) ?? 0;
+  if (dragged > 6) {
+    draggedDistanceById.set(item.id, 0);
+    return;
+  }
+  draggedDistanceById.set(item.id, 0);
+  if (actionOpenId.value === item.id) {
+    dragOffset.value[item.id] = 0;
+    actionOpenId.value = null;
+    return;
+  }
+  await openTrackerImagePreview(item);
+};
+
+const editTracker = async (id: string) => {
+  dragOffset.value[id] = 0;
+  actionOpenId.value = null;
+  await router.push({ name: routeNames.trackerEdit, params: { id } });
+};
+
+const deleteTracker = async (item: TrackerItem) => {
+  const ok = await uiStore.askConfirm('Delete tracker', `Delete "${item.title}"? This cannot be undone.`);
+  if (!ok) return;
+  try {
+    await trackerStore.deleteTracker(item.id);
+    uiStore.pushToast({ tone: 'success', text: 'Tracker deleted.' });
+    dragOffset.value[item.id] = 0;
+    if (actionOpenId.value === item.id) actionOpenId.value = null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Action failed.';
+    uiStore.pushToast({ tone: 'error', text: `Unable to delete tracker: ${message}` });
+  }
+};
+
+const cardStyle = (id: string) => {
+  const x = dragOffset.value[id] ?? 0;
+  const isDragging = draggingId.value === id;
+  return {
+    transform: `translateX(${x}px)`,
+    transition: isDragging ? 'none' : 'transform 180ms ease',
+  };
+};
 </script>
 
 <template>
@@ -111,15 +212,42 @@ const deliveryReceiptLabel = (tracker: TrackerItem | null) => {
     <div class="stack">
       <Skeleton v-if="trackerStore.isLoading" class="h-24 w-full" />
       <Card v-else-if="!trackerStore.filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
-      <button
+      <div
         v-for="item in trackerStore.filteredTrackers"
         :key="item.id"
-        type="button"
-        class="tracker-link text-left"
-        @click="openTrackerImagePreview(item)"
+        :ref="(el) => setCardRef(item.id, el)"
+        class="relative overflow-hidden rounded-3xl border border-[var(--border)]"
       >
-        <TrackerCard :tracker="item" :show-notes="true" />
-      </button>
+        <div class="absolute inset-y-0 right-0 grid w-1/2 grid-cols-2">
+          <button
+            type="button"
+            class="grid place-items-center bg-amber-100 text-amber-700"
+            @click="editTracker(item.id)"
+          >
+            <Pencil :size="20" />
+          </button>
+          <button
+            type="button"
+            class="grid place-items-center bg-rose-100 text-rose-700"
+            @click="deleteTracker(item)"
+          >
+            <Trash2 :size="20" />
+          </button>
+        </div>
+        <button
+          type="button"
+          class="tracker-link relative w-full text-left"
+          :style="cardStyle(item.id)"
+          @pointerdown="onPointerDown(item.id, $event)"
+          @pointermove="onPointerMove(item.id, $event)"
+          @pointerup="endDrag(item.id, $event)"
+          @pointercancel="endDrag(item.id, $event)"
+          @lostpointercapture="endDrag(item.id)"
+          @click="onCardClick(item)"
+        >
+          <TrackerCard :tracker="item" :show-notes="true" />
+        </button>
+      </div>
     </div>
 
     <Dialog :open="imageDialogOpen" @update:open="(open) => !open && closeImageDialog()">

@@ -159,6 +159,10 @@ watch(
     activeObjectUrls.clear();
     const next: Record<string, string> = {};
     for (const activity of items) {
+      if (activity.previewImageDataUrl) {
+        next[activity.id] = activity.previewImageDataUrl;
+        continue;
+      }
       if (!activity.trackerId) continue;
       const tracker = trackerById.value(activity.trackerId);
       if (!tracker) continue;
@@ -381,6 +385,12 @@ const pickCurrentMonth = () => {
             alt="activity tracker image"
             class="h-14 w-14 shrink-0 rounded-xl object-cover border border-[var(--border)]"
           />
+          <div
+            v-else
+            class="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-slate-50 text-[10px] font-bold text-slate-400"
+          >
+            NO IMG
+          </div>
         </div>
       </Card>
     </div>

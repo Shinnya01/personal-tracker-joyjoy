@@ -10,6 +10,22 @@ export interface TrackerWriteInput extends Omit<TrackerItem, 'id' | 'createdAt' 
 }
 
 export const trackerService = {
+  async blobToDataUrl(blob: Blob) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Unable to read image preview.'));
+          return;
+        }
+        resolve(result);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Unable to read image preview.'));
+      reader.readAsDataURL(blob);
+    });
+  },
+
   async create(input: TrackerWriteInput) {
     const now = nowIso();
     const tracker: TrackerItem = {
@@ -64,6 +80,8 @@ export const trackerService = {
     if (!existing) return;
 
     const imageIds = existing.images ?? [];
+    const firstImage = imageIds[0] ? await imageRepo.getById(imageIds[0]) : undefined;
+    const previewImageDataUrl = firstImage?.blob ? await this.blobToDataUrl(firstImage.blob) : undefined;
     await db.transaction('rw', db.trackers, db.images, db.activities, async () => {
       await trackerRepo.delete(id);
       if (imageIds.length) await imageRepo.bulkDelete(imageIds);
@@ -72,6 +90,7 @@ export const trackerService = {
         trackerId: id,
         type: 'deleted',
         message: `Deleted tracker: ${existing.title}`,
+        previewImageDataUrl,
         createdAt: nowIso(),
       });
     });

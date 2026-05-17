@@ -65,33 +65,43 @@ const openPicker = () => {
       <ImagePlus :size="18" class="text-rose-500" />
       Images
     </div>
-    <div class="relative rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/20 p-5 text-center">
-      <div v-if="isProcessing" class="upload-processing-overlay">
-        <div class="upload-processing-spinner" />
-        <p class="text-xs font-semibold text-[var(--accent-strong)]">Processing images...</p>
-      </div>
-      <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rose-100 text-rose-500">
-        <ImagePlus :size="24" />
-      </div>
-      <p class="mt-3 text-xl font-bold text-slate-900">Add images</p>
-      <p class="mt-1 text-sm text-slate-500">Tap to browse or drag and drop</p>
-      <Button type="button" size="sm" :disabled="isProcessing" class="mt-3 rounded-xl border-none bg-rose-100 px-5 py-1.5 text-sm font-semibold text-rose-600 shadow-none disabled:opacity-60" @click="openPicker">
-        Browse files
-      </Button>
-      <input ref="fileInput" type="file" accept="image/*,.heic,.heif" multiple class="hidden" :disabled="isProcessing" @change="onFiles" />
-    </div>
     <p class="text-sm text-slate-500">You can add multiple images.</p>
     <p v-if="uploadWarning" class="text-sm text-[var(--danger)]">{{ uploadWarning }}</p>
+    <input ref="fileInput" type="file" accept="image/*,.heic,.heif" multiple class="hidden" :disabled="isProcessing" @change="onFiles" />
 
     <div class="image-grid image-grid-large">
-      <div v-for="img in existing" :key="img.id" class="image-item">
+      <button
+        type="button"
+        class="grid h-[106px] w-full place-items-center rounded-xl border-2 border-dashed border-rose-200 bg-rose-50/20 text-rose-500 transition hover:bg-rose-100/40 disabled:opacity-60"
+        :disabled="isProcessing"
+        aria-label="Add more images"
+        @click="openPicker"
+      >
+        <ImagePlus :size="24" />
+      </button>
+
+      <div v-for="img in existing" :key="img.id" class="image-item relative">
         <img :src="createObjectUrl(img.blob)" alt="existing" @click="fullscreen = createObjectUrl(img.blob)" />
-        <Button size="sm" variant="secondary" @click="emit('removeExisting', img.id)">Remove</Button>
+        <button
+          type="button"
+          class="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm"
+          aria-label="Remove image"
+          @click="emit('removeExisting', img.id)"
+        >
+          <X :size="14" />
+        </button>
       </div>
 
-      <div v-for="preview in previews" :key="preview.id" class="image-item">
+      <div v-for="preview in previews" :key="preview.id" class="image-item relative">
         <img :src="preview.url" alt="preview" @click="fullscreen = preview.url" />
-        <Button size="sm" variant="secondary" @click="removePreview(preview.id)">Remove</Button>
+        <button
+          type="button"
+          class="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm"
+          aria-label="Remove image"
+          @click="removePreview(preview.id)"
+        >
+          <X :size="14" />
+        </button>
       </div>
     </div>
   </Card>

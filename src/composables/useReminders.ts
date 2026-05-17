@@ -1,4 +1,4 @@
-﻿import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useUiStore } from '../stores/uiStore';
@@ -9,6 +9,9 @@ export const useReminders = () => {
   const uiStore = useUiStore();
 
   let timer: number | undefined;
+  const onTrackerCreated = () => {
+    void runCheck();
+  };
   const FIXED_DUE_DAY = 5;
   const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
@@ -72,9 +75,14 @@ export const useReminders = () => {
 
   onMounted(() => {
     void start();
+    window.addEventListener('tracker-created', onTrackerCreated);
   });
-  onUnmounted(stop);
+  onUnmounted(() => {
+    stop();
+    window.removeEventListener('tracker-created', onTrackerCreated);
+  });
 
   return { runCheck };
 };
+
 

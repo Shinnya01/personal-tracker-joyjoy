@@ -4,7 +4,6 @@ import { Toaster } from 'vue-sonner';
 import AppLockGate from './components/common/AppLockGate.vue';
 import ConfirmDialog from './components/common/ConfirmDialog.vue';
 import ReminderAlertDialog from './components/common/ReminderAlertDialog.vue';
-import ToastStack from './components/common/ToastStack.vue';
 import Card from './components/ui/Card.vue';
 import Button from './components/ui/Button.vue';
 import Input from './components/ui/Input.vue';
@@ -51,10 +50,9 @@ const saveName = async () => {
 
 <template>
   <AppLockGate />
-  <ToastStack />
   <ConfirmDialog />
   <ReminderAlertDialog />
-  <Toaster rich-colors position="top-center" />
+  <Toaster rich-colors position="top-right" />
 
   <div v-if="shouldAskName" class="overlay" style="z-index:100">
     <Card class="dialog">

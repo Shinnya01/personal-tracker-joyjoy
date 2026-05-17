@@ -1,5 +1,6 @@
 ﻿import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 
 export interface ToastMessage {
   id: string;
@@ -24,17 +25,15 @@ interface ReminderAlertState {
 }
 
 export const useUiStore = defineStore('ui', () => {
-  const toasts = ref<ToastMessage[]>([]);
   const confirm = ref<ConfirmState>({ open: false, title: '', message: '' });
   const reminderAlert = ref<ReminderAlertState>({ open: false, title: '', message: '' });
   const reminderQueue = ref<ReminderAlertState[]>([]);
 
   const pushToast = ({ text, tone }: Omit<ToastMessage, 'id'>) => {
-    const id = crypto.randomUUID();
-    toasts.value.push({ id, text, tone });
-    window.setTimeout(() => {
-      toasts.value = toasts.value.filter((toast) => toast.id !== id);
-    }, 3000);
+    if (tone === 'success') toast.success(text);
+    else if (tone === 'error') toast.error(text);
+    else if (tone === 'warning') toast.warning(text);
+    else toast(text);
   };
 
   const askConfirm = (title: string, message: string) =>
@@ -74,6 +73,11 @@ export const useUiStore = defineStore('ui', () => {
     reminderAlert.value = { open: false, title: '', message: '' };
   };
 
+  const closeAllReminderAlerts = () => {
+    reminderQueue.value = [];
+    reminderAlert.value = { open: false, title: '', message: '' };
+  };
+
   const dismissReminderAlertByKey = (dedupeKey?: string) => {
     if (!dedupeKey) return;
     reminderQueue.value = reminderQueue.value.filter((item) => item.dedupeKey !== dedupeKey);
@@ -88,7 +92,6 @@ export const useUiStore = defineStore('ui', () => {
   };
 
   return {
-    toasts,
     confirm,
     reminderAlert,
     reminderQueue,
@@ -97,6 +100,7 @@ export const useUiStore = defineStore('ui', () => {
     resolveConfirm,
     showReminderAlert,
     closeReminderAlert,
+    closeAllReminderAlerts,
     dismissReminderAlertByKey,
   };
 });

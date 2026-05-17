@@ -7,6 +7,8 @@ import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
 import { useTrackerStore } from '../stores/trackerStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
@@ -14,6 +16,8 @@ import type { StoredImage } from '../types/tracker';
 const route = useRoute();
 const router = useRouter();
 const trackerStore = useTrackerStore();
+const settingsStore = useSettingsStore();
+const uiStore = useUiStore();
 const existingImages = ref<StoredImage[]>([]);
 const isSubmitting = ref(false);
 
@@ -21,16 +25,53 @@ const trackerId = computed(() => (route.params.id ? String(route.params.id) : nu
 const tracker = computed(() => (trackerId.value ? trackerStore.getById(trackerId.value) : undefined));
 
 onMounted(async () => {
+  await settingsStore.load();
   await trackerStore.refresh();
   if (trackerId.value) existingImages.value = await imageRepo.listByTrackerId(trackerId.value);
 });
+
+const FIXED_DUE_DAY = 5;
+const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
+
+const showDueAlertsNow = () => {
+  if (!settingsStore.settings.reminder.enabled) return;
+
+  const nowDate = new Date();
+  const todayDay = nowDate.getDate();
+  if (todayDay < FIXED_DUE_DAY) return;
+
+  const thisMonthKey = monthKey(nowDate);
+  const isLate = todayDay > FIXED_DUE_DAY;
+  const due = trackerStore.trackers.filter((item) => {
+    if (!item.deliveryReceiptDate) return false;
+    const base = new Date(item.deliveryReceiptDate);
+    if (Number.isNaN(base.getTime())) return false;
+    if (monthIndex(nowDate) <= monthIndex(base)) return false;
+    return true;
+  });
+
+  for (const item of due) {
+    const key = `${item.id}:${thisMonthKey}`;
+    if (settingsStore.settings.dismissedReminderMonths?.[key]) continue;
+    uiStore.showReminderAlert({
+      title: isLate ? 'Late Reminder' : 'Reminder Due Today',
+      message: 'Please take a picture and sent it',
+      trackerId: item.id,
+      monthKey: thisMonthKey,
+      dedupeKey: key,
+    });
+  }
+};
 
 const handleSubmit = async (payload: any) => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
   const { images, keepImageIds, ...base } = payload;
   try {
+    let actionLabel: 'created' | 'updated' = 'created';
     if (trackerId.value) {
+      actionLabel = 'updated';
       const updated = await trackerStore.upsertTracker(
         { ...base, images: [...keepImageIds, ...images.map((img: StoredImage) => img.id)] },
         trackerId.value,
@@ -41,9 +82,18 @@ const handleSubmit = async (payload: any) => {
       const created = await trackerStore.upsertTracker({ ...base, images: images.map((img: StoredImage) => img.id) });
       if (!created) return;
       await trackerService.saveImages(created.id, images);
+      window.dispatchEvent(new Event('tracker-created'));
     }
     await trackerStore.refresh();
+    showDueAlertsNow();
+    uiStore.pushToast({
+      tone: 'success',
+      text: actionLabel === 'created' ? 'Tracker created successfully.' : 'Tracker updated successfully.',
+    });
     await router.push('/trackers');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Action failed.';
+    uiStore.pushToast({ tone: 'error', text: `Unable to save tracker: ${message}` });
   } finally {
     isSubmitting.value = false;
   }

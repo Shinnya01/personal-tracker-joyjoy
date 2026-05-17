@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App.vue';
 import router from './router';
 import './style.css';
+import 'vue-sonner/style.css';
 
 const updateSW = registerSW({
   immediate: true,
