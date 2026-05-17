@@ -45,6 +45,12 @@ export const useUiStore = defineStore('ui', () => {
   const resolveConfirm = (accepted: boolean) => {
     confirm.value.resolve?.(accepted);
     confirm.value = { open: false, title: '', message: '' };
+
+    // Defensive interaction recovery for mobile standalone mode.
+    if (typeof document !== 'undefined') {
+      if (document.body.style.pointerEvents === 'none') document.body.style.pointerEvents = '';
+      if (document.documentElement.style.pointerEvents === 'none') document.documentElement.style.pointerEvents = '';
+    }
   };
 
   const showReminderAlert = (alert: Omit<ReminderAlertState, 'open'>) => {
