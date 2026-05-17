@@ -22,35 +22,115 @@ const uiStore = useUiStore();
 const trackerStore = useTrackerStore();
 const importMode = ref<'replace' | 'merge'>('replace');
 const reminderEnabled = ref(false);
+const selectedBackupFile = ref<File | null>(null);
+const darkMode = ref<'system' | 'light' | 'dark'>('system');
+const DARK_MODE_OPTIONS = [
+  { label: 'System (Default)', value: 'system' },
+  { label: 'Light', value: 'light' },
+  { label: 'Dark', value: 'dark' },
+] as const;
+const IMPORT_MODE_OPTIONS = [
+  { label: 'Replace All', value: 'replace' },
+  { label: 'Merge by ID', value: 'merge' },
+] as const;
 
 onMounted(async () => {
   await settingsStore.load();
   reminderEnabled.value = settingsStore.settings.reminder.enabled;
+  darkMode.value = settingsStore.settings.darkMode;
 });
 
-const onImport = async (event: Event) => {
+const onBackupFileChange = (event: Event) => {
   const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
+  selectedBackupFile.value = input.files?.[0] ?? null;
+  if (selectedBackupFile.value) {
+    uiStore.pushToast({
+      tone: 'info',
+      text: `Selected backup file: ${selectedBackupFile.value.name}`,
+    });
+  }
+};
+
+const exportBackup = async () => {
+  try {
+    await backup.exportJson();
+    uiStore.pushToast({
+      tone: 'success',
+      text: 'Backup exported successfully.',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to export backup.';
+    uiStore.pushToast({
+      tone: 'error',
+      text: `Export failed: ${message}`,
+    });
+  }
+};
+
+const importBackup = async () => {
+  const file = selectedBackupFile.value;
   if (!file) return;
-  await backup.importJson(file, importMode.value);
-  await trackerStore.refresh();
+
+  try {
+    await backup.importJson(file, importMode.value);
+    await trackerStore.refresh();
+    uiStore.pushToast({
+      tone: 'success',
+      text: `Backup imported successfully (${importMode.value === 'replace' ? 'Replace All' : 'Merge by ID'}).`,
+    });
+    selectedBackupFile.value = null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to import backup.';
+    uiStore.pushToast({
+      tone: 'error',
+      text: `Import failed: ${message}`,
+    });
+  }
 };
 
 const clearData = async () => {
   const ok = await uiStore.askConfirm('Clear data', 'This will remove all trackers, images, and activity logs.');
   if (!ok) return;
-  await backupService.clearAllData(false);
-  await trackerStore.refresh();
+  try {
+    await backupService.clearAllData(false);
+    await trackerStore.refresh();
+    uiStore.pushToast({
+      tone: 'success',
+      text: 'All tracker data has been cleared.',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to clear data.';
+    uiStore.pushToast({
+      tone: 'error',
+      text: `Clear data failed: ${message}`,
+    });
+  }
 };
 
 const resetApp = async () => {
   const ok = await uiStore.askConfirm('Reset app', 'This will remove all app data including settings. This cannot be undone.');
   if (!ok) return;
-  await backupService.clearAllData(true);
-  await settingsStore.load();
-  await trackerStore.refresh();
+  try {
+    await backupService.clearAllData(true);
+    await settingsStore.load();
+    await trackerStore.refresh();
+    uiStore.pushToast({
+      tone: 'success',
+      text: 'App reset complete.',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to reset app.';
+    uiStore.pushToast({
+      tone: 'error',
+      text: `Reset failed: ${message}`,
+    });
+  }
 };
 const updateReminder = async (next: boolean) => { reminderEnabled.value = next; await settingsStore.setReminderSettings({ ...settingsStore.settings.reminder, enabled: next }); };
+const updateDarkMode = async (value: 'system' | 'light' | 'dark') => {
+  darkMode.value = value;
+  await settingsStore.setDarkMode(value);
+};
 </script>
 
 <template>
@@ -71,14 +151,11 @@ const updateReminder = async (next: boolean) => { reminderEnabled.value = next; 
         <label class="grid gap-2">
           <span class="text-sm font-medium text-slate-700">Appearance</span>
           <Select
-            :model-value="settingsStore.settings.darkMode"
+            v-model="darkMode"
+            :options="DARK_MODE_OPTIONS"
             class="h-11 rounded-2xl text-sm"
-            @update:model-value="(value) => settingsStore.setDarkMode((value as 'system' | 'light' | 'dark'))"
-          >
-            <option value="system">System (Default)</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </Select>
+            @update:model-value="(value) => updateDarkMode(value as 'system' | 'light' | 'dark')"
+          />
         </label>
         <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
           <span class="text-sm font-medium text-slate-800">Reminders</span>
@@ -101,17 +178,21 @@ const updateReminder = async (next: boolean) => { reminderEnabled.value = next; 
         <CardTitle class="flex items-center gap-2 text-lg"><DatabaseBackup :size="18" class="text-rose-500" /> Backup</CardTitle>
       </CardHeader>
       <CardContent class="grid gap-3">
-        <Button :disabled="backup.isBusy.value" @click="backup.exportJson">Export JSON</Button>
-        <Select v-model="importMode" class="h-11 rounded-2xl text-sm">
-          <option value="replace">Replace All</option>
-          <option value="merge">Merge by ID</option>
-        </Select>
+        <Button :disabled="backup.isBusy.value" @click="exportBackup">Export JSON</Button>
+        <Select v-model="importMode" :options="IMPORT_MODE_OPTIONS" class="h-11 rounded-2xl text-sm" />
         <input
           type="file"
           accept="application/json"
           class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-rose-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-rose-600"
-          @change="onImport"
+          @change="onBackupFileChange"
         />
+        <Button
+          v-if="selectedBackupFile"
+          :disabled="backup.isBusy.value || !selectedBackupFile"
+          @click="importBackup"
+        >
+          Import Backup
+        </Button>
       </CardContent>
     </Card>
 

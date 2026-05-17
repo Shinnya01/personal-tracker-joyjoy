@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { CalendarClock } from 'lucide-vue-next';
+import { CalendarClock, Clock } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { imageRepo } from '../../db/repositories/imageRepo';
 import type { TrackerItem } from '../../types/tracker';
 import Card from '../ui/Card.vue';
 
-const props = defineProps<{ tracker: TrackerItem }>();
+const props = withDefaults(defineProps<{ tracker: TrackerItem; showNotes?: boolean }>(), {
+  showNotes: false,
+});
 const thumbUrl = ref<string | null>(null);
 const imageCount = ref(0);
 let activeThumbUrl: string | null = null;
@@ -28,6 +30,14 @@ const formatDateLong = (iso: string) =>
     day: 'numeric',
     year: 'numeric',
   });
+
+const deliveryReceiptLabel = (tracker: TrackerItem) => {
+  if (!tracker.deliveryReceiptDate) return '';
+  const start = new Date(tracker.deliveryReceiptDate).toLocaleDateString();
+  if (!tracker.deliveryReceiptEndDate) return start;
+  const end = new Date(tracker.deliveryReceiptEndDate).toLocaleDateString();
+  return `${start} - ${end}`;
+};
 
 watch(
   () => props.tracker.id,
@@ -62,25 +72,33 @@ onBeforeUnmount(() => {
     <div class="tracker-card-head">
       <div class="min-w-0 flex-1">
         <h3 class="tracker-title">{{ props.tracker.title }}</h3>
-        <div class="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-slate-500">
-          <span>Updated {{ timeAgoPh(props.tracker.updatedAt) }}</span>
+        <p v-if="props.tracker.company" class="meta-line text-xs">{{ props.tracker.company }}</p>
+        <div class="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-slate-500">
+          <Clock :size="14" />
+          <span>{{ timeAgoPh(props.tracker.updatedAt) }}</span>
           <span>({{ formatDateLong(props.tracker.updatedAt) }})</span>
         </div>
+        <p v-if="props.tracker.deliveryReceiptDate"
+          class="meta-line flex min-w-0 flex-wrap items-center gap-1 text-xs overflow-hidden break-words">
+          <CalendarClock :size="14" />
+          <span class="min-w-0 whitespace-normal break-words">Delivery Receipt: {{ deliveryReceiptLabel(props.tracker) }}</span>
+        </p>
       </div>
       <div v-if="thumbUrl" class="relative">
         <img :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" />
-        <div
-          v-if="imageCount > 1"
-          class="absolute inset-0 grid place-items-center rounded-[inherit] bg-black/40 text-sm font-bold text-white"
-        >
+        <div v-if="imageCount > 1"
+          class="absolute inset-0 grid place-items-center rounded-[inherit] bg-black/40 text-sm font-bold text-white">
           +{{ imageCount - 1 }}
         </div>
       </div>
       <div v-else class="tracker-thumb tracker-thumb-box tracker-thumb-placeholder">NO IMG</div>
     </div>
-    <p v-if="props.tracker.deliveryReceiptDate" class="meta-line flex min-w-0 flex-wrap items-center gap-1 overflow-hidden break-words">
-      <CalendarClock :size="14" />
-      <span class="min-w-0 whitespace-normal break-words">Delivery Receipt: {{ new Date(props.tracker.deliveryReceiptDate).toLocaleDateString() }}</span>
+    <p
+      v-if="props.showNotes && props.tracker.notes?.trim()"
+      class="meta-line tracker-note rounded-xl bg-rose-50/40 px-3 py-2 whitespace-pre-wrap"
+    >
+      {{ props.tracker.notes }}
     </p>
   </Card>
 </template>
+

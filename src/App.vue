@@ -1,13 +1,16 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Toaster } from 'vue-sonner';
 import AppLockGate from './components/common/AppLockGate.vue';
 import ConfirmDialog from './components/common/ConfirmDialog.vue';
+import ReminderAlertDialog from './components/common/ReminderAlertDialog.vue';
 import ToastStack from './components/common/ToastStack.vue';
 import Card from './components/ui/Card.vue';
 import Button from './components/ui/Button.vue';
 import Input from './components/ui/Input.vue';
 import { useReminders } from './composables/useReminders';
+import { useInteractionRecovery } from './composables/useInteractionRecovery';
+import { acquireGlobalScrollLock, releaseGlobalScrollLock } from './composables/useGlobalScrollLock';
 import { useTrackerStore } from './stores/trackerStore';
 import { useSettingsStore } from './stores/settingsStore';
 
@@ -16,6 +19,7 @@ const trackerStore = useTrackerStore();
 const displayNameInput = ref('');
 
 useReminders();
+useInteractionRecovery();
 
 onMounted(async () => {
   await settingsStore.load();
@@ -23,6 +27,19 @@ onMounted(async () => {
 });
 
 const shouldAskName = computed(() => settingsStore.isLoaded && !settingsStore.settings.displayName?.trim());
+
+watch(
+  () => shouldAskName.value,
+  (open) => {
+    if (open) acquireGlobalScrollLock('welcome-name-dialog');
+    else releaseGlobalScrollLock('welcome-name-dialog');
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  releaseGlobalScrollLock('welcome-name-dialog');
+});
 
 const saveName = async () => {
   const value = displayNameInput.value.trim();
@@ -36,6 +53,7 @@ const saveName = async () => {
   <AppLockGate />
   <ToastStack />
   <ConfirmDialog />
+  <ReminderAlertDialog />
   <Toaster rich-colors position="top-center" />
 
   <div v-if="shouldAskName" class="overlay" style="z-index:100">

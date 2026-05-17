@@ -19,6 +19,7 @@ const normalizeSettings = (value: Partial<AppSettings> | null | undefined): AppS
     ...(value?.lock ?? {}),
   },
   lastReminderEvents: value?.lastReminderEvents ?? {},
+  dismissedReminderMonths: value?.dismissedReminderMonths ?? {},
   updatedAt: value?.updatedAt ?? nowIso(),
 });
 
@@ -71,6 +72,14 @@ export const useSettingsStore = defineStore('settings', () => {
     await persist({ ...settings.value, lock });
   };
 
+  const dismissReminderForMonth = async (trackerId: string, monthKey: string) => {
+    const dismissedReminderMonths = {
+      ...(settings.value.dismissedReminderMonths ?? {}),
+      [`${trackerId}:${monthKey}`]: nowIso(),
+    };
+    await persist({ ...settings.value, dismissedReminderMonths });
+  };
+
   return {
     settings,
     isLoaded,
@@ -79,6 +88,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setReminderSettings,
     markReminderTriggered,
     setLock,
+    dismissReminderForMonth,
     persist,
   };
 });

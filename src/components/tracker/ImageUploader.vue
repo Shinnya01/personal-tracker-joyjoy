@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { ImagePlus } from 'lucide-vue-next';
+import { ImagePlus, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { StoredImage } from '../../types/tracker';
 import { useImageProcessor } from '../../composables/useImageProcessor';
@@ -96,8 +96,18 @@ const openPicker = () => {
     </div>
   </Card>
 
-  <div v-if="fullscreen" class="overlay" @click="fullscreen = null">
-    <img :src="fullscreen" class="fullscreen-image" alt="fullscreen preview" />
+  <div v-if="fullscreen" class="overlay modal-overlay" @click.self="fullscreen = null">
+    <Button
+      type="button"
+      size="icon"
+      variant="secondary"
+      class="modal-close-button"
+      aria-label="Close fullscreen image"
+      @click="fullscreen = null"
+    >
+      <X :size="18" />
+    </Button>
+    <img :src="fullscreen" class="fullscreen-image" alt="fullscreen preview" @click.stop />
   </div>
 </template>
 

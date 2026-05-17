@@ -1,9 +1,24 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
+import { onBeforeUnmount, watch } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
+import { acquireGlobalScrollLock, releaseGlobalScrollLock } from '../../composables/useGlobalScrollLock';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
 
 const uiStore = useUiStore();
+
+watch(
+  () => uiStore.confirm.open,
+  (open) => {
+    if (open) acquireGlobalScrollLock('confirm-dialog');
+    else releaseGlobalScrollLock('confirm-dialog');
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  releaseGlobalScrollLock('confirm-dialog');
+});
 </script>
 
 <template>
@@ -18,4 +33,3 @@ const uiStore = useUiStore();
     </Card>
   </div>
 </template>
-

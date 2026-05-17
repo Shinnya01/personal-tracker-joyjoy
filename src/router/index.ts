@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 export const routeNames = {
   dashboard: 'dashboard',
+  recentActivity: 'recent-activity',
   trackers: 'trackers',
   trackerNew: 'tracker-new',
   trackerDetail: 'tracker-detail',
@@ -24,6 +25,11 @@ const routes: RouteRecordRaw[] = [
         path: 'trackers',
         name: routeNames.trackers,
         component: () => import('../pages/TrackersPage.vue'),
+      },
+      {
+        path: 'activity',
+        name: routeNames.recentActivity,
+        component: () => import('../pages/RecentActivityPage.vue'),
       },
       {
         path: 'trackers/new',

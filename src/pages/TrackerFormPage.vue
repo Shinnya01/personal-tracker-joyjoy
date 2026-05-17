@@ -7,7 +7,6 @@ import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
 import { useTrackerStore } from '../stores/trackerStore';
-import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
@@ -15,8 +14,8 @@ import type { StoredImage } from '../types/tracker';
 const route = useRoute();
 const router = useRouter();
 const trackerStore = useTrackerStore();
-const uiStore = useUiStore();
 const existingImages = ref<StoredImage[]>([]);
+const isSubmitting = ref(false);
 
 const trackerId = computed(() => (route.params.id ? String(route.params.id) : null));
 const tracker = computed(() => (trackerId.value ? trackerStore.getById(trackerId.value) : undefined));
@@ -27,27 +26,27 @@ onMounted(async () => {
 });
 
 const handleSubmit = async (payload: any) => {
-  const normalizedTitle = String(payload.title ?? '').trim().toLowerCase();
-  const duplicate = trackerStore.trackers.find(
-    (item) => item.id !== trackerId.value && item.title.trim().toLowerCase() === normalizedTitle,
-  );
-  if (duplicate) {
-    uiStore.pushToast({ text: 'Title already exists. Please use a different title.', tone: 'warning' });
-    return;
-  }
-
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   const { images, keepImageIds, ...base } = payload;
-  if (trackerId.value) {
-    await trackerStore.upsertTracker({ ...base, images: [...keepImageIds, ...images.map((img: StoredImage) => img.id)] }, trackerId.value);
-    await trackerService.saveImages(trackerId.value, images);
-  } else {
-    const tempId = crypto.randomUUID();
-    await trackerStore.upsertTracker({ ...base, images: images.map((img: StoredImage) => img.id) });
-    const latest = trackerStore.trackers[0];
-    await trackerService.saveImages(latest?.id ?? tempId, images);
+  try {
+    if (trackerId.value) {
+      const updated = await trackerStore.upsertTracker(
+        { ...base, images: [...keepImageIds, ...images.map((img: StoredImage) => img.id)] },
+        trackerId.value,
+      );
+      if (!updated) return;
+      await trackerService.saveImages(trackerId.value, images);
+    } else {
+      const created = await trackerStore.upsertTracker({ ...base, images: images.map((img: StoredImage) => img.id) });
+      if (!created) return;
+      await trackerService.saveImages(created.id, images);
+    }
+    await trackerStore.refresh();
+    await router.push('/trackers');
+  } finally {
+    isSubmitting.value = false;
   }
-  await trackerStore.refresh();
-  await router.push('/trackers');
 };
 
 const removeExisting = async (imageId: string) => {
@@ -64,6 +63,6 @@ const removeExisting = async (imageId: string) => {
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
     </Card>
-    <TrackerForm :tracker="tracker" :existing-images="existingImages" @submit="handleSubmit" @remove-existing="removeExisting" />
+    <TrackerForm :tracker="tracker" :existing-images="existingImages" :is-submitting="isSubmitting" @submit="handleSubmit" @remove-existing="removeExisting" />
   </section>
 </template>

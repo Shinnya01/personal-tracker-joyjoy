@@ -9,25 +9,52 @@ export const useReminders = () => {
   const uiStore = useUiStore();
 
   let timer: number | undefined;
+  const FIXED_DUE_DAY = 5;
+  const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
 
   const runCheck = async () => {
     if (!settingsStore.isLoaded) {
       await settingsStore.load();
     }
+    await trackerStore.refresh();
     if (!settingsStore.settings.reminder.enabled) return;
-    const now = Date.now();
-    const due = trackerStore.trackers.filter((item) => item.deliveryReceiptDate && new Date(item.deliveryReceiptDate).getTime() <= now);
+    const nowDate = new Date();
+    const todayDay = nowDate.getDate();
+    if (todayDay < FIXED_DUE_DAY) return;
+    const thisMonthKey = monthKey(nowDate);
+    const isLate = todayDay > FIXED_DUE_DAY;
+    const due = trackerStore.trackers.filter((item) => {
+      if (!item.deliveryReceiptDate) return false;
+      const base = new Date(item.deliveryReceiptDate);
+      if (Number.isNaN(base.getTime())) return false;
+      if (monthIndex(nowDate) <= monthIndex(base)) return false;
+      return true;
+    });
 
     for (const item of due) {
-      const key = `${item.id}:${item.deliveryReceiptDate}`;
-      if (settingsStore.settings.lastReminderEvents?.[key]) continue;
+      const key = `${item.id}:${thisMonthKey}`;
+      if (settingsStore.settings.dismissedReminderMonths?.[key]) continue;
 
-      uiStore.pushToast({ text: `Delivery receipt date reached: ${item.title}`, tone: 'warning' });
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Tracker Reminder', { body: item.title });
+      const statusLabel = isLate ? 'Late Reminder' : 'Reminder Due Today';
+      const statusMessage = isLate
+        ? `${item.title} is late and should be sent.`
+        : `${item.title} should be sent today.`;
+      uiStore.showReminderAlert({
+        title: statusLabel,
+        message: statusMessage,
+        trackerId: item.id,
+        monthKey: thisMonthKey,
+        dedupeKey: key,
+      });
+
+      if (!settingsStore.settings.lastReminderEvents?.[key]) {
+        uiStore.pushToast({ text: statusMessage, tone: 'warning' });
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(statusLabel, { body: statusMessage });
+        }
+        await settingsStore.markReminderTriggered(key);
       }
-
-      await settingsStore.markReminderTriggered(key);
     }
   };
 

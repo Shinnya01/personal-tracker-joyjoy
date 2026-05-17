@@ -27,9 +27,9 @@ export const useTrackerStore = defineStore('tracker', () => {
   };
 
   const upsertTracker = async (payload: TrackerWriteInput, id?: string) => {
-    if (id) await trackerService.update(id, payload);
-    else await trackerService.create(payload);
+    const tracker = id ? await trackerService.update(id, payload) : await trackerService.create(payload);
     await refresh();
+    return tracker;
   };
 
   const deleteTracker = async (id: string) => {

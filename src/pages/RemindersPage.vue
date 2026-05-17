@@ -1,21 +1,53 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { AlertCircle, BellRing, CalendarClock, ChevronLeft, ChevronRight, ClockArrowUp } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
+import { AlertCircle, BellRing, ChevronLeft, ChevronRight, ClockArrowUp } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
+import TrackerCard from '../components/tracker/TrackerCard.vue';
 import Button from '../components/ui/Button.vue';
 import Dialog from '../components/ui/Dialog.vue';
 import DialogContent from '../components/ui/DialogContent.vue';
 import { X } from 'lucide-vue-next';
 import { useTrackerStore } from '../stores/trackerStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 
 const trackerStore = useTrackerStore();
-onMounted(() => { void trackerStore.refresh(); });
-const buckets = computed(() => trackerStore.reminderBuckets);
+const settingsStore = useSettingsStore();
+const uiStore = useUiStore();
+onMounted(async () => {
+  await settingsStore.load();
+  await trackerStore.refresh();
+});
+const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
+const FIXED_DUE_DAY = 5;
+const today = computed(() => new Date());
+const thisMonthKey = computed(() => monthKey(today.value));
+const isDismissed = (item: TrackerItem) => Boolean(settingsStore.settings.dismissedReminderMonths?.[`${item.id}:${thisMonthKey.value}`]);
+
+const buckets = computed(() => {
+  const day = today.value.getDate();
+  const items = trackerStore.trackers.filter((item) => {
+    if (!item.deliveryReceiptDate) return false;
+    const base = new Date(item.deliveryReceiptDate);
+    if (Number.isNaN(base.getTime())) return false;
+    if (monthIndex(today.value) <= monthIndex(base)) return false;
+    if (isDismissed(item)) return false;
+    return true;
+  });
+
+  const todayList = day === FIXED_DUE_DAY ? items : [];
+  const upcoming = day < FIXED_DUE_DAY ? items : [];
+  const overdue = day > FIXED_DUE_DAY ? items : [];
+
+  return { today: todayList, upcoming, overdue };
+});
 const selected = ref<TrackerItem | null>(null);
 const selectedImages = ref<StoredImage[]>([]);
 const dialogOpen = ref(false);
@@ -23,10 +55,23 @@ const selectedImageIndex = ref(0);
 const selectedImageUrl = ref<string | null>(null);
 const objectUrls = new Map<string, string>();
 
-const formatDate = (iso?: string) => {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const cleanupReminderDialogState = () => {
+  dialogOpen.value = false;
+  selected.value = null;
+  selectedImages.value = [];
+  selectedImageIndex.value = 0;
+  selectedImageUrl.value = null;
 };
+
+onBeforeUnmount(() => {
+  cleanupReminderDialogState();
+  objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  objectUrls.clear();
+});
+
+onBeforeRouteLeave(() => {
+  cleanupReminderDialogState();
+});
 
 const openReminderDialog = async (item: TrackerItem) => {
   selected.value = item;
@@ -44,13 +89,7 @@ const openReminderDialog = async (item: TrackerItem) => {
   dialogOpen.value = true;
 };
 
-const closeReminderDialog = () => {
-  dialogOpen.value = false;
-  selected.value = null;
-  selectedImages.value = [];
-  selectedImageIndex.value = 0;
-  selectedImageUrl.value = null;
-};
+const closeReminderDialog = cleanupReminderDialogState;
 
 const imageUrl = (img: StoredImage) => {
   const existing = objectUrls.get(img.id);
@@ -70,6 +109,21 @@ const showNext = () => {
   if (selectedImageIndex.value >= selectedImages.value.length - 1) return;
   selectedImageIndex.value += 1;
   selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
+};
+
+const deliveryReceiptLabel = (tracker: TrackerItem | null) => {
+  if (!tracker?.deliveryReceiptDate) return '';
+  const start = new Date(tracker.deliveryReceiptDate).toLocaleDateString();
+  if (!tracker.deliveryReceiptEndDate) return start;
+  const end = new Date(tracker.deliveryReceiptEndDate).toLocaleDateString();
+  return `${start} - ${end}`;
+};
+
+const dismissForMonth = async () => {
+  if (!selected.value) return;
+  await settingsStore.dismissReminderForMonth(selected.value.id, thisMonthKey.value);
+  uiStore.pushToast({ tone: 'success', text: 'Reminder dismissed for this month.' });
+  closeReminderDialog();
 };
 </script>
 
@@ -112,11 +166,10 @@ const showNext = () => {
           v-for="item in buckets.today"
           :key="item.id"
           type="button"
-          class="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-left"
+          class="tracker-link text-left"
           @click="openReminderDialog(item)"
         >
-          <p class="text-sm font-semibold text-slate-900">{{ item.title }}</p>
-          <p class="mt-1 flex items-center gap-1 text-xs text-slate-500"><CalendarClock :size="12" /> {{ formatDate(item.deliveryReceiptDate) }}</p>
+          <TrackerCard :tracker="item" />
         </button>
       </div>
       <p v-else class="text-sm text-slate-500">No alerts for today.</p>
@@ -132,11 +185,10 @@ const showNext = () => {
           v-for="item in buckets.upcoming"
           :key="item.id"
           type="button"
-          class="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-left"
+          class="tracker-link text-left"
           @click="openReminderDialog(item)"
         >
-          <p class="text-sm font-semibold text-slate-900">{{ item.title }}</p>
-          <p class="mt-1 flex items-center gap-1 text-xs text-slate-500"><CalendarClock :size="12" /> {{ formatDate(item.deliveryReceiptDate) }}</p>
+          <TrackerCard :tracker="item" />
         </button>
       </div>
       <p v-else class="text-sm text-slate-500">No upcoming alerts.</p>
@@ -152,11 +204,10 @@ const showNext = () => {
           v-for="item in buckets.overdue"
           :key="item.id"
           type="button"
-          class="rounded-2xl border border-rose-100 bg-rose-50/40 p-3 text-left"
+          class="tracker-link text-left"
           @click="openReminderDialog(item)"
         >
-          <p class="text-sm font-semibold text-slate-900">{{ item.title }}</p>
-          <p class="mt-1 flex items-center gap-1 text-xs text-rose-600"><CalendarClock :size="12" /> {{ formatDate(item.deliveryReceiptDate) }}</p>
+          <TrackerCard :tracker="item" />
         </button>
       </div>
       <p v-else class="text-sm text-slate-500">No overdue alerts.</p>
@@ -168,8 +219,9 @@ const showNext = () => {
           <div class="row-between">
             <div>
               <p class="text-sm font-semibold text-slate-900">{{ selected?.title }}</p>
+              <p v-if="selected?.company" class="text-xs text-slate-500">{{ selected.company }}</p>
               <p v-if="selected?.deliveryReceiptDate" class="text-xs text-slate-500">
-                Delivery Receipt: {{ new Date(selected.deliveryReceiptDate).toLocaleDateString() }}
+                Delivery Receipt: {{ deliveryReceiptLabel(selected) }}
               </p>
             </div>
             <Button size="icon" aria-label="Close image" @click="closeReminderDialog">
@@ -207,10 +259,19 @@ const showNext = () => {
               </Button>
             </div>
           </div>
+          <p
+            v-if="selected?.notes?.trim()"
+            class="min-w-0 w-full overflow-hidden rounded-xl bg-rose-50/40 px-3 py-2 text-sm text-slate-600 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+          >
+            {{ selected.notes }}
+          </p>
           <p v-if="selectedImages.length > 1" class="text-center text-xs font-medium text-slate-500">
             {{ selectedImageIndex + 1 }}/{{ selectedImages.length }}
           </p>
-          <p v-else class="text-sm text-slate-500">No images uploaded.</p>
+          <p v-if="!selectedImages.length" class="text-sm text-slate-500">No images uploaded.</p>
+          <div class="flex justify-end">
+            <Button type="button" variant="secondary" @click="dismissForMonth">Dismiss This Month</Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

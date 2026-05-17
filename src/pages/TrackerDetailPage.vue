@@ -30,13 +30,23 @@ const remove = async () => {
   await trackerStore.deleteTracker(trackerId.value);
   await router.push('/trackers');
 };
+
+const deliveryReceiptLabel = computed(() => {
+  const item = tracker.value;
+  if (!item?.deliveryReceiptDate) return '';
+  const start = new Date(item.deliveryReceiptDate).toLocaleDateString();
+  if (!item.deliveryReceiptEndDate) return start;
+  const end = new Date(item.deliveryReceiptEndDate).toLocaleDateString();
+  return `${start} - ${end}`;
+});
 </script>
 
 <template>
   <section v-if="tracker" class="stack stack-lg detail-page">
     <Card class="panel-card">
       <h1 class="detail-title">{{ tracker.title }}</h1>
-      <p v-if="tracker.deliveryReceiptDate" class="meta-line"><CalendarClock :size="14" /> Delivery Receipt: {{ new Date(tracker.deliveryReceiptDate).toLocaleDateString() }}</p>
+      <p v-if="tracker.company" class="meta-line">{{ tracker.company }}</p>
+      <p v-if="tracker.deliveryReceiptDate" class="meta-line"><CalendarClock :size="14" /> Delivery Receipt: {{ deliveryReceiptLabel }}</p>
     </Card>
 
     <Card class="panel-card">

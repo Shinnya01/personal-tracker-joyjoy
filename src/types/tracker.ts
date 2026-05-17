@@ -4,7 +4,10 @@ export type BackupImportMode = 'replace' | 'merge';
 export interface TrackerItem {
   id: string;
   title: string;
+  company?: string;
+  notes?: string;
   deliveryReceiptDate?: string;
+  deliveryReceiptEndDate?: string;
   images?: string[];
   createdAt: string;
   updatedAt: string;
@@ -41,6 +44,7 @@ export interface AppSettings {
   lock: LockSettings;
   seededAt?: string;
   lastReminderEvents?: Record<string, string>;
+  dismissedReminderMonths?: Record<string, string>;
   updatedAt: string;
 }
 
@@ -63,6 +67,7 @@ export interface BackupPayload {
 
 export interface TrackerFilters {
   search: string;
+  company: string;
   sort: TrackerSortMode;
 }
 

@@ -4,16 +4,20 @@ import type { TrackerFilters, TrackerItem } from '../types/tracker';
 export const useTrackerQuery = (source: () => TrackerItem[]) => {
   const filters = ref<TrackerFilters>({
     search: '',
+    company: 'all',
     sort: 'newest',
   });
 
   const filteredTrackers = computed(() => {
     let items = [...source()];
-    const { search, sort } = filters.value;
+    const { search, company, sort } = filters.value;
 
     if (search.trim()) {
       const keyword = search.toLowerCase();
       items = items.filter((item) => item.title.toLowerCase().includes(keyword));
+    }
+    if (company !== 'all') {
+      items = items.filter((item) => (item.company ?? '') === company);
     }
 
     items.sort((a, b) => {

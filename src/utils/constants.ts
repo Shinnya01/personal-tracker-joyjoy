@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     biometricEnabled: false,
   },
   lastReminderEvents: {},
+  dismissedReminderMonths: {},
   updatedAt: new Date().toISOString(),
 };
 

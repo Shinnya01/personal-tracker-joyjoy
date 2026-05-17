@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
 import TrackerFilters from '../components/tracker/TrackerFilters.vue';
@@ -28,18 +29,25 @@ onMounted(() => {
   void trackerStore.refresh();
 });
 
-onBeforeUnmount(() => {
-  objectUrls.forEach((url) => URL.revokeObjectURL(url));
-  objectUrls.clear();
-});
-
-const closeImageDialog = () => {
+const cleanupPreviewState = () => {
   imageDialogOpen.value = false;
   selectedImageUrl.value = null;
   selectedImages.value = [];
   selectedImageIndex.value = 0;
   selectedTracker.value = null;
 };
+
+onBeforeUnmount(() => {
+  cleanupPreviewState();
+  objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  objectUrls.clear();
+});
+
+onBeforeRouteLeave(() => {
+  cleanupPreviewState();
+});
+
+const closeImageDialog = cleanupPreviewState;
 
 const imageUrl = (img: StoredImage) => {
   const existing = objectUrls.get(img.id);
@@ -78,6 +86,14 @@ const showNext = () => {
   selectedImageIndex.value += 1;
   selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
 };
+
+const deliveryReceiptLabel = (tracker: TrackerItem | null) => {
+  if (!tracker?.deliveryReceiptDate) return '';
+  const start = new Date(tracker.deliveryReceiptDate).toLocaleDateString();
+  if (!tracker.deliveryReceiptEndDate) return start;
+  const end = new Date(tracker.deliveryReceiptEndDate).toLocaleDateString();
+  return `${start} - ${end}`;
+};
 </script>
 
 <template>
@@ -102,7 +118,7 @@ const showNext = () => {
         class="tracker-link text-left"
         @click="openTrackerImagePreview(item)"
       >
-        <TrackerCard :tracker="item" />
+        <TrackerCard :tracker="item" :show-notes="true" />
       </button>
     </div>
 
@@ -112,8 +128,9 @@ const showNext = () => {
           <div class="row-between">
             <div>
               <p class="text-sm font-semibold text-slate-900">{{ selectedTracker?.title }}</p>
+              <p v-if="selectedTracker?.company" class="text-xs text-slate-500">{{ selectedTracker.company }}</p>
               <p v-if="selectedTracker?.deliveryReceiptDate" class="text-xs text-slate-500">
-                Delivery Receipt: {{ new Date(selectedTracker.deliveryReceiptDate).toLocaleDateString() }}
+                Delivery Receipt: {{ deliveryReceiptLabel(selectedTracker) }}
               </p>
             </div>
             <Button size="icon" aria-label="Close image" @click="closeImageDialog">
@@ -151,6 +168,12 @@ const showNext = () => {
               </Button>
             </div>
           </div>
+          <p
+            v-if="selectedTracker?.notes?.trim()"
+            class="min-w-0 w-full overflow-hidden rounded-xl bg-rose-50/40 px-3 py-2 text-sm text-slate-600 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+          >
+            {{ selectedTracker.notes }}
+          </p>
           <p v-if="selectedImages.length > 1" class="text-center text-xs font-medium text-slate-500">
             {{ selectedImageIndex + 1 }}/{{ selectedImages.length }}
           </p>
@@ -159,5 +182,6 @@ const showNext = () => {
     </Dialog>
   </section>
 </template>
+
 
 
