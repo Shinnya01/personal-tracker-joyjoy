@@ -235,11 +235,11 @@ const submit = () => {
     !isValidDateFormat ||
     Number.isNaN(startTime) ||
     !isValidEndDateFormat ||
-    (rawEndDate && Number.isNaN(endTime)) ||
+    (!!rawEndDate && Number.isNaN(endTime)) ||
     needsRangeEnd ||
-    (rawEndDate && endTime < startTime) ||
+    (!!rawEndDate && endTime < startTime) ||
     startTime > todayTime ||
-    (rawEndDate && endTime > todayTime);
+    (!!rawEndDate && endTime > todayTime);
   showDateWarning.value = hasDateError;
 
   if (!hasCompany || hasDateError) return;

@@ -24,7 +24,7 @@ withDefaults(
   defineProps<{
     class?: string;
     placeholder?: string;
-    options: SelectOption[];
+    options: readonly SelectOption[];
   }>(),
   {
     class: '',
