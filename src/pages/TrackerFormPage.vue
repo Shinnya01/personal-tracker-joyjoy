@@ -1,8 +1,10 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { RefreshCw } from 'lucide-vue-next';
 import TrackerForm from '../components/tracker/TrackerForm.vue';
 import Card from '../components/ui/Card.vue';
+import Button from '../components/ui/Button.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
 import CardDescription from '../components/ui/CardDescription.vue';
@@ -14,12 +16,14 @@ import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
 import { syncQueueRepo } from '../db/repositories/syncQueueRepo';
 import { createId, nowIso } from '../utils/date';
+import { useManualSync } from '../composables/useManualSync';
 
 const route = useRoute();
 const router = useRouter();
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
 const uiStore = useUiStore();
+const { authStore, isSyncing, syncNow } = useManualSync();
 const existingImages = ref<StoredImage[]>([]);
 const removedExistingIds = ref<string[]>([]);
 const isSubmitting = ref(false);
@@ -124,7 +128,20 @@ const removeExisting = async (imageId: string) => {
   <section class="flex flex-col gap-5">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-5">
-      <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">{{ trackerId ? 'Update tracker' : 'Create a tracker' }}</CardTitle>
+        <div class="flex items-center justify-between gap-3">
+          <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">{{ trackerId ? 'Update tracker' : 'Create a tracker' }}</CardTitle>
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
+          </Button>
+        </div>
       <CardDescription class="mt-3 text-sm text-slate-500">{{ trackerId ? 'Update details, receipt date, and images.' : 'Add details, receipt date, and images.' }}</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>

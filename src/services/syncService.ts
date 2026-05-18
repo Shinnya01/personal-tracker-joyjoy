@@ -10,12 +10,19 @@ const BUCKET = 'tracker-images';
 const ensureReady = () => {
   if (!hasSupabaseConfig || !supabase) throw new Error('Supabase is not configured.');
 };
+const ensureNoError = (
+  result: { error: { message: string } | null },
+  context: string,
+) => {
+  if (result.error) throw new Error(`${context}: ${result.error.message}`);
+};
 
 const trackerPayload = (item: TrackerItem, userId: string) => ({
   id: item.id,
   user_id: userId,
   title: item.title,
   company: item.company ?? null,
+  category: item.category ?? null,
   notes: item.notes ?? null,
   delivery_receipt_date: item.deliveryReceiptDate ?? null,
   delivery_receipt_end_date: item.deliveryReceiptEndDate ?? null,
@@ -74,19 +81,30 @@ export const syncService = {
     for (const item of queue) {
       if (item.entityType === 'tracker') {
         if (item.action === 'delete') {
-          const { data: remoteTrackerImages } = await supabase!
+          const remoteTrackerImagesResult = await supabase!
             .from('tracker_images')
             .select('image_path')
             .eq('tracker_id', item.entityId)
             .eq('user_id', user.id);
+          ensureNoError(remoteTrackerImagesResult, 'Failed to fetch tracker images before delete');
+          const remoteTrackerImages = remoteTrackerImagesResult.data;
           const storagePaths = (remoteTrackerImages ?? [])
             .map((row) => normalizeStoragePath(row.image_path))
             .filter((path): path is string => Boolean(path));
           if (storagePaths.length) {
-            await supabase!.storage.from(BUCKET).remove(storagePaths);
+            const storageDeleteResult = await supabase!.storage.from(BUCKET).remove(storagePaths);
+            if (storageDeleteResult.error) {
+              throw new Error(`Failed to delete tracker image files: ${storageDeleteResult.error.message}`);
+            }
           }
-          await supabase!.from('trackers').delete().eq('id', item.entityId).eq('user_id', user.id);
-          await supabase!.from('tracker_images').delete().eq('tracker_id', item.entityId).eq('user_id', user.id);
+          ensureNoError(
+            await supabase!.from('trackers').delete().eq('id', item.entityId).eq('user_id', user.id),
+            `Failed to delete tracker ${item.entityId}`,
+          );
+          ensureNoError(
+            await supabase!.from('tracker_images').delete().eq('tracker_id', item.entityId).eq('user_id', user.id),
+            `Failed to delete tracker images for ${item.entityId}`,
+          );
           await syncQueueRepo.delete(item.id);
           continue;
         }
@@ -95,24 +113,35 @@ export const syncService = {
           await syncQueueRepo.delete(item.id);
           continue;
         }
-        await supabase!.from('trackers').upsert(trackerPayload({ ...tracker, userId: user.id }, user.id), { onConflict: 'id' });
+        ensureNoError(
+          await supabase!.from('trackers').upsert(trackerPayload({ ...tracker, userId: user.id }, user.id), { onConflict: 'id' }),
+          `Failed to upsert tracker ${tracker.id}`,
+        );
         await db.trackers.update(tracker.id, { syncStatus: 'synced', userId: user.id });
         await syncQueueRepo.delete(item.id);
       }
 
       if (item.entityType === 'image') {
         if (item.action === 'delete') {
-          const { data: remoteImage } = await supabase!
+          const remoteImageResult = await supabase!
             .from('tracker_images')
             .select('image_path')
             .eq('id', item.entityId)
             .eq('user_id', user.id)
             .maybeSingle();
+          ensureNoError(remoteImageResult, `Failed to fetch image ${item.entityId} before delete`);
+          const remoteImage = remoteImageResult.data;
           const remoteImagePath = normalizeStoragePath(remoteImage?.image_path);
           if (remoteImagePath) {
-            await supabase!.storage.from(BUCKET).remove([remoteImagePath]);
+            const storageDeleteResult = await supabase!.storage.from(BUCKET).remove([remoteImagePath]);
+            if (storageDeleteResult.error) {
+              throw new Error(`Failed to delete image file ${remoteImagePath}: ${storageDeleteResult.error.message}`);
+            }
           }
-          await supabase!.from('tracker_images').delete().eq('id', item.entityId).eq('user_id', user.id);
+          ensureNoError(
+            await supabase!.from('tracker_images').delete().eq('id', item.entityId).eq('user_id', user.id),
+            `Failed to delete image ${item.entityId}`,
+          );
           await syncQueueRepo.delete(item.id);
           continue;
         }
@@ -128,7 +157,7 @@ export const syncService = {
           cacheControl: '3600',
         });
         if (uploadResult.error) throw new Error(`Image upload failed (${image.name}): ${uploadResult.error.message}`);
-        await supabase!.from('tracker_images').upsert({
+        ensureNoError(await supabase!.from('tracker_images').upsert({
           id: image.id,
           user_id: user.id,
           tracker_id: image.trackerId,
@@ -138,13 +167,15 @@ export const syncService = {
           size: image.size,
           updated_at: image.updatedAt ?? image.createdAt,
           deleted_at: image.deletedAt ?? null,
-        }, { onConflict: 'id' });
+        }, { onConflict: 'id' }), `Failed to upsert image ${image.id}`);
         await db.images.update(image.id, { syncStatus: 'synced', userId: user.id, imagePath });
         await syncQueueRepo.delete(item.id);
       }
     }
 
-    const { data: remoteTrackers } = await supabase!.from('trackers').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    const remoteTrackersResult = await supabase!.from('trackers').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    ensureNoError(remoteTrackersResult, 'Failed to fetch trackers');
+    const remoteTrackers = remoteTrackersResult.data;
     const remoteTrackerIds = new Set((remoteTrackers ?? []).map((row) => String(row.id)));
     for (const row of remoteTrackers ?? []) {
       const local = await trackerRepo.getById(row.id);
@@ -154,6 +185,7 @@ export const syncService = {
           id: row.id,
           title: row.title,
           company: row.company ?? undefined,
+          category: row.category ?? undefined,
           notes: row.notes ?? undefined,
           deliveryReceiptDate: row.delivery_receipt_date ?? undefined,
           deliveryReceiptEndDate: row.delivery_receipt_end_date ?? undefined,
@@ -174,7 +206,9 @@ export const syncService = {
       await db.trackers.bulkDelete(localTrackerIdsToDelete);
     }
 
-    const { data: remoteImages } = await supabase!.from('tracker_images').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    const remoteImagesResult = await supabase!.from('tracker_images').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    ensureNoError(remoteImagesResult, 'Failed to fetch images');
+    const remoteImages = remoteImagesResult.data;
     const remoteImageIds = new Set((remoteImages ?? []).map((row) => String(row.id)));
     for (const row of remoteImages ?? []) {
       const local = await imageRepo.getById(row.id);
@@ -202,7 +236,10 @@ export const syncService = {
       }
 
       if (row.image_path !== resolvedPath) {
-        await supabase!.from('tracker_images').update({ image_path: resolvedPath }).eq('id', row.id).eq('user_id', user.id);
+        ensureNoError(
+          await supabase!.from('tracker_images').update({ image_path: resolvedPath }).eq('id', row.id).eq('user_id', user.id),
+          `Failed to update normalized image path for ${row.id}`,
+        );
       }
       await imageRepo.put({
         id: row.id,

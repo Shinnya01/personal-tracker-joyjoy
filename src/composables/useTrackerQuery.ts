@@ -5,19 +5,35 @@ export const useTrackerQuery = (source: () => TrackerItem[]) => {
   const filters = ref<TrackerFilters>({
     search: '',
     company: 'all',
+    category: 'all',
     sort: 'newest',
   });
 
+  const ensureFilterShape = () => {
+    if (!filters.value.category) {
+      filters.value = { ...filters.value, category: 'all' };
+    }
+  };
+  ensureFilterShape();
+
   const filteredTrackers = computed(() => {
+    ensureFilterShape();
     let items = [...source()];
-    const { search, company, sort } = filters.value;
+    const { search, company, category, sort } = filters.value;
 
     if (search.trim()) {
       const keyword = search.toLowerCase();
-      items = items.filter((item) => item.title.toLowerCase().includes(keyword));
+      items = items.filter((item) =>
+        item.title.toLowerCase().includes(keyword)
+        || (item.company ?? '').toLowerCase().includes(keyword)
+        || (item.category ?? '').toLowerCase().includes(keyword),
+      );
     }
     if (company !== 'all') {
       items = items.filter((item) => (item.company ?? '') === company);
+    }
+    if (category !== 'all') {
+      items = items.filter((item) => (item.category ?? '') === category);
     }
 
     items.sort((a, b) => {

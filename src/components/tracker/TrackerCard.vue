@@ -79,6 +79,7 @@ const onImageError = (event: Event) => {
       <div class="min-w-0 flex-1">
         <h3 class="tracker-title">{{ props.tracker.title }}</h3>
         <p v-if="props.tracker.company" class="meta-line text-xs">{{ props.tracker.company }}</p>
+        <p v-if="props.tracker.category" class="meta-line text-xs">{{ props.tracker.category }}</p>
         <div class="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-slate-500">
           <Clock :size="14" />
           <span>{{ timeAgoPh(props.tracker.updatedAt) }}</span>

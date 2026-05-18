@@ -21,6 +21,7 @@ import {
 } from 'radix-vue';
 import { parseDate } from '@internationalized/date';
 import type { StoredImage, TrackerItem } from '../../types/tracker';
+import { CATEGORY_OPTIONS, COMPANY_OPTIONS } from '../../constants/trackerOptions';
 import ImageUploader from './ImageUploader.vue';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
@@ -32,6 +33,7 @@ import Textarea from '../ui/Textarea.vue';
 interface FormModel {
   title: string;
   company: string;
+  category: string;
   notes: string;
   deliveryReceiptDate: string;
   deliveryReceiptEndDate: string;
@@ -50,21 +52,17 @@ const emit = defineEmits<{ submit: [payload: TrackerSubmitPayload]; removeExisti
 const model = reactive<FormModel>({
   title: '',
   company: '',
+  category: '',
   notes: '',
   deliveryReceiptDate: '',
   deliveryReceiptEndDate: '',
 });
 
-const COMPANY_OPTIONS = [
-  { label: 'BIG GOALS CORPORATION', value: 'BIG GOALS CORPORATION' },
-  { label: 'BIG GOALS PETROLEUM TRADING', value: 'BIG GOALS PETROLEUM TRADING' },
-  { label: 'POSITIVE BUILDERS', value: 'POSITIVE BUILDERS' },
-] as const;
-
 const addedImages = ref<StoredImage[]>([]);
 const keepImageIds = ref<string[]>([]);
 const showDateWarning = ref(false);
 const showCompanyWarning = ref(false);
+const showCategoryWarning = ref(false);
 const isImagesProcessing = ref(false);
 const pickerOpen = ref(false);
 const pickerValue = ref<any>(undefined);
@@ -76,6 +74,7 @@ watch(
     if (!tracker) return;
     model.title = tracker.title;
     model.company = tracker.company ?? '';
+    model.category = tracker.category ?? '';
     model.notes = tracker.notes ?? '';
     model.deliveryReceiptDate = tracker.deliveryReceiptDate ? tracker.deliveryReceiptDate.slice(0, 10) : '';
     model.deliveryReceiptEndDate = tracker.deliveryReceiptEndDate ? tracker.deliveryReceiptEndDate.slice(0, 10) : '';
@@ -222,7 +221,9 @@ const setToday = () => {
 const submit = () => {
   if (isImagesProcessing.value || props.isSubmitting) return;
   const hasCompany = Boolean(model.company.trim());
+  const hasCategory = Boolean(model.category.trim());
   showCompanyWarning.value = !hasCompany;
+  showCategoryWarning.value = !hasCategory;
   const rawDate = model.deliveryReceiptDate.trim();
   const rawEndDate = model.deliveryReceiptEndDate.trim();
   const isValidDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(rawDate);
@@ -244,11 +245,12 @@ const submit = () => {
     (!!rawEndDate && endTime > todayTime);
   showDateWarning.value = hasDateError;
 
-  if (!hasCompany || hasDateError) return;
+  if (!hasCompany || !hasCategory || hasDateError) return;
 
   emit('submit', {
     title: model.title.trim(),
     company: model.company,
+    category: model.category,
     notes: model.notes.trim(),
     deliveryReceiptDate: new Date(rawDate).toISOString(),
     deliveryReceiptEndDate: rawEndDate ? new Date(rawEndDate).toISOString() : undefined,
@@ -289,6 +291,19 @@ const removeExisting = (id: string) => {
           class="rounded-2xl border-slate-200 bg-slate-50 text-sm md:rounded-3xl md:text-lg"
         />
         <p v-if="showCompanyWarning" class="text-sm text-[var(--danger)]">Please select a company.</p>
+      </label>
+      <label class="grid gap-3">
+        <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">
+          <Building2 :size="22" class="text-rose-500" />
+          Category
+        </span>
+        <Select
+          v-model="model.category"
+          :options="CATEGORY_OPTIONS"
+          placeholder="Select category"
+          class="rounded-2xl border-slate-200 bg-slate-50 text-sm md:rounded-3xl md:text-lg"
+        />
+        <p v-if="showCategoryWarning" class="text-sm text-[var(--danger)]">Please select a category.</p>
       </label>
       <label class="grid gap-3">
         <span class="flex items-center gap-2 text-base font-semibold text-slate-900 md:text-lg">

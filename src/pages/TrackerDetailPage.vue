@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { CalendarClock, Pencil, Trash2 } from 'lucide-vue-next';
+import { CalendarClock, Pencil, RefreshCw, Trash2 } from 'lucide-vue-next';
 import { useTrackerStore } from '../stores/trackerStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage } from '../types/tracker';
@@ -9,11 +9,13 @@ import { useUiStore } from '../stores/uiStore';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 import Card from '../components/ui/Card.vue';
 import Button from '../components/ui/Button.vue';
+import { useManualSync } from '../composables/useManualSync';
 
 const route = useRoute();
 const router = useRouter();
 const trackerStore = useTrackerStore();
 const uiStore = useUiStore();
+const { authStore, isSyncing, syncNow } = useManualSync();
 const images = ref<StoredImage[]>([]);
 const imageUrls = ref<Record<string, string>>({});
 const trackerId = computed(() => String(route.params.id));
@@ -63,7 +65,20 @@ const deliveryReceiptLabel = computed(() => {
 <template>
   <section v-if="tracker" class="stack stack-lg detail-page">
     <Card class="panel-card">
-      <h1 class="detail-title">{{ tracker.title }}</h1>
+      <div class="flex items-start justify-between gap-3">
+        <h1 class="detail-title">{{ tracker.title }}</h1>
+        <Button
+          v-if="authStore.isLoggedIn"
+          size="sm"
+          variant="secondary"
+          class="rounded-xl"
+          :disabled="isSyncing"
+          @click="syncNow"
+        >
+          <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+          {{ isSyncing ? 'Syncing' : 'Sync' }}
+        </Button>
+      </div>
       <p v-if="tracker.company" class="meta-line">{{ tracker.company }}</p>
       <p v-if="tracker.deliveryReceiptDate" class="meta-line"><CalendarClock :size="14" /> Delivery Receipt: {{ deliveryReceiptLabel }}</p>
     </Card>

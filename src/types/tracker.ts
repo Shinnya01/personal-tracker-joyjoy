@@ -5,6 +5,7 @@ export interface TrackerItem {
   id: string;
   title: string;
   company?: string;
+  category?: string;
   notes?: string;
   deliveryReceiptDate?: string;
   deliveryReceiptEndDate?: string;
@@ -77,6 +78,7 @@ export interface BackupPayload {
 export interface TrackerFilters {
   search: string;
   company: string;
+  category: string;
   sort: TrackerSortMode;
 }
 

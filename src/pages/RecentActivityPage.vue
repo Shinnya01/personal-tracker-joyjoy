@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import { ArrowLeft, CheckCircle2, DatabaseBackup, Pen, Sparkles, Trash2 } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle2, DatabaseBackup, Pen, RefreshCw, Sparkles, Trash2 } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import Button from '../components/ui/Button.vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import type { ActivityLog } from '../types/tracker';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
+import { useManualSync } from '../composables/useManualSync';
 
 const trackerStore = useTrackerStore();
+const { authStore, isSyncing, syncNow } = useManualSync();
 const activityThumbs = ref<Record<string, string>>({});
 const activeObjectUrls = new Map<string, string>();
 
@@ -105,12 +107,25 @@ const onImageError = (event: Event) => {
           <h1 class="text-4xl leading-tight font-extrabold text-slate-900">Recent Activity</h1>
           <p class="mt-2 text-sm text-slate-500">View your latest tracker actions.</p>
         </div>
-        <RouterLink to="/">
-          <Button size="sm" variant="secondary">
-            <ArrowLeft :size="14" />
-            Back
+        <div class="flex items-center gap-2">
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
           </Button>
-        </RouterLink>
+          <RouterLink to="/">
+            <Button size="sm" variant="secondary">
+              <ArrowLeft :size="14" />
+              Back
+            </Button>
+          </RouterLink>
+        </div>
       </div>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
     </Card>

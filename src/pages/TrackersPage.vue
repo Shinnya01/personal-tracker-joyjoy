@@ -2,7 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Pencil, RefreshCw, Trash2, X } from 'lucide-vue-next';
 import TrackerCard from '../components/tracker/TrackerCard.vue';
 import TrackerFilters from '../components/tracker/TrackerFilters.vue';
 import Button from '../components/ui/Button.vue';
@@ -16,6 +16,7 @@ import Skeleton from '../components/ui/Skeleton.vue';
 import { TransitionGroup } from 'vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useUiStore } from '../stores/uiStore';
+import { useManualSync } from '../composables/useManualSync';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 import { routeNames } from '../router';
@@ -24,6 +25,7 @@ import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 const router = useRouter();
 const trackerStore = useTrackerStore();
 const uiStore = useUiStore();
+const { authStore, isSyncing, syncNow } = useManualSync();
 const selectedImageUrl = ref<string | null>(null);
 const imageDialogOpen = ref(false);
 const selectedImages = ref<StoredImage[]>([]);
@@ -214,7 +216,20 @@ const onImageError = (event: Event) => {
   <section class="flex flex-col gap-5">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-6">
-        <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Trackers</CardTitle>
+        <div class="flex items-center justify-between gap-3">
+          <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Trackers</CardTitle>
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
+          </Button>
+        </div>
         <CardDescription class="mt-3 text-sm text-slate-500">Search and sort your records.</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>

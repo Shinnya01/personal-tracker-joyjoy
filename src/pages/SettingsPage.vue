@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { DatabaseBackup, MoonStar, Trash2 } from 'lucide-vue-next';
+import { DatabaseBackup, MoonStar, RefreshCw, Trash2 } from 'lucide-vue-next';
 import { useBackup } from '../composables/useBackup';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useUiStore } from '../stores/uiStore';
@@ -18,6 +18,7 @@ import Button from '../components/ui/Button.vue';
 import Input from '../components/ui/Input.vue';
 import Select from '../components/ui/Select.vue';
 import Switch from '../components/ui/Switch.vue';
+import { useManualSync } from '../composables/useManualSync';
 
 const backup = useBackup();
 const router = useRouter();
@@ -25,6 +26,7 @@ const settingsStore = useSettingsStore();
 const uiStore = useUiStore();
 const trackerStore = useTrackerStore();
 const authStore = useAuthStore();
+const { isSyncing, syncNow } = useManualSync();
 const importMode = ref<'replace' | 'merge'>('replace');
 const reminderEnabled = ref(false);
 const selectedBackupFile = ref<File | null>(null);
@@ -175,7 +177,20 @@ const signOut = async () => {
   <section class="flex flex-col gap-5">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-8">
-        <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Settings</CardTitle>
+        <div class="flex items-center justify-between gap-3">
+          <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Settings</CardTitle>
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
+          </Button>
+        </div>
         <CardDescription class="mt-3 text-sm text-slate-500">Personalize reminders and backup tools.</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>

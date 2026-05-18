@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
-import { AlertCircle, BellRing, ChevronLeft, ChevronRight, ClockArrowUp } from 'lucide-vue-next';
+import { AlertCircle, BellRing, ChevronLeft, ChevronRight, ClockArrowUp, RefreshCw } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
@@ -17,10 +17,12 @@ import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
+import { useManualSync } from '../composables/useManualSync';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
 const uiStore = useUiStore();
+const { authStore, isSyncing, syncNow } = useManualSync();
 onMounted(async () => {
   await settingsStore.load();
   await trackerStore.refresh();
@@ -137,7 +139,20 @@ const onImageError = (event: Event) => {
   <section class="flex flex-col gap-5">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-8">
-        <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Reminders</CardTitle>
+        <div class="flex items-center justify-between gap-3">
+          <CardTitle class="text-4xl leading-tight font-extrabold text-slate-900">Reminders</CardTitle>
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
+          </Button>
+        </div>
         <CardDescription class="mt-3 text-sm text-slate-500">Track overdue and upcoming delivery receipts.</CardDescription>
       </CardHeader>
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
