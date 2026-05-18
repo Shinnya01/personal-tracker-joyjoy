@@ -53,7 +53,9 @@ onMounted(async () => {
   window.addEventListener('touchcancel', onPullEnd, { passive: true });
 });
 
-const shouldAskName = computed(() => settingsStore.isLoaded && !settingsStore.settings.displayName?.trim());
+const shouldAskName = computed(() =>
+  authStore.isLoggedIn && settingsStore.isLoaded && !settingsStore.settings.displayName?.trim(),
+);
 
 watch(
   () => shouldAskName.value,
