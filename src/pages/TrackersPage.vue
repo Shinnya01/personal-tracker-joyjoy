@@ -19,6 +19,7 @@ import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 import { routeNames } from '../router';
+import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 
 const router = useRouter();
 const trackerStore = useTrackerStore();
@@ -202,6 +203,11 @@ const cardStyle = (id: string) => {
     transition: isDragging ? 'none' : 'transform 180ms ease',
   };
 };
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
+};
 </script>
 
 <template>
@@ -297,6 +303,7 @@ const cardStyle = (id: string) => {
               :src="selectedImageUrl"
               alt="tracker image preview"
               class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain"
+              @error="onImageError"
             />
             <div class="flex justify-center">
               <Button

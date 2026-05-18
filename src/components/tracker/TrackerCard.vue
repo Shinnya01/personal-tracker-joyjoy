@@ -3,6 +3,7 @@ import { CalendarClock, Clock } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { imageRepo } from '../../db/repositories/imageRepo';
 import type { TrackerItem } from '../../types/tracker';
+import { FALLBACK_IMAGE_DATA_URL } from '../../utils/image';
 import Card from '../ui/Card.vue';
 
 const props = withDefaults(defineProps<{ tracker: TrackerItem; showNotes?: boolean }>(), {
@@ -65,6 +66,11 @@ onBeforeUnmount(() => {
     activeThumbUrl = null;
   }
 });
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
+};
 </script>
 
 <template>
@@ -85,7 +91,7 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <div v-if="thumbUrl" class="relative">
-        <img :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" />
+        <img :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" @error="onImageError" />
         <div v-if="imageCount > 1"
           class="absolute inset-0 grid place-items-center rounded-[inherit] bg-black/40 text-sm font-bold text-white">
           +{{ imageCount - 1 }}

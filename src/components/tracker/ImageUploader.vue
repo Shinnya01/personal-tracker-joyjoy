@@ -1,8 +1,10 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ImagePlus, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { StoredImage } from '../../types/tracker';
 import { useImageProcessor } from '../../composables/useImageProcessor';
+import { FALLBACK_IMAGE_DATA_URL } from '../../utils/image';
+import { useUiStore } from '../../stores/uiStore';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
 
@@ -11,6 +13,8 @@ const emit = defineEmits<{ changed: [StoredImage[]]; removeExisting: [string]; p
 const fullscreen = ref<string | null>(null);
 const isProcessing = ref(false);
 const uploadWarning = ref('');
+const existingObjectUrls = ref<Record<string, string>>({});
+const uiStore = useUiStore();
 
 const isSupportedImage = (file: File) => {
   const type = (file.type || '').toLowerCase();
@@ -18,10 +22,28 @@ const isSupportedImage = (file: File) => {
   return /\.(jpe?g|png|webp|heic|heif|gif|bmp|tiff?)$/i.test(file.name);
 };
 
-const { previews, processFiles, removePreview } = useImageProcessor();
+const { previews, processFiles, removePreview, clear } = useImageProcessor();
 const fileInput = ref<HTMLInputElement | null>(null);
 
-const createObjectUrl = (blob: Blob) => window.URL.createObjectURL(blob);
+const rebuildExistingUrls = () => {
+  Object.values(existingObjectUrls.value).forEach((url) => URL.revokeObjectURL(url));
+  const next: Record<string, string> = {};
+  for (const img of props.existing ?? []) {
+    next[img.id] = URL.createObjectURL(img.blob);
+  }
+  existingObjectUrls.value = next;
+};
+
+watch(() => props.existing, rebuildExistingUrls, { immediate: true, deep: true });
+
+onBeforeUnmount(() => {
+  clear();
+  Object.values(existingObjectUrls.value).forEach((url) => URL.revokeObjectURL(url));
+});
+
+const existingWithUrls = computed(() =>
+  (props.existing ?? []).map((img) => ({ ...img, url: existingObjectUrls.value[img.id] ?? FALLBACK_IMAGE_DATA_URL })),
+);
 
 const onFiles = async (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -45,6 +67,10 @@ const onFiles = async (event: Event) => {
       const names = result.failed.slice(0, 2).join(', ');
       const more = result.failed.length > 2 ? ` and ${result.failed.length - 2} more` : '';
       uploadWarning.value = `Some images could not be added (${names}${more}). If this is HEIC/HEIF, your browser may not support decoding it.`;
+      uiStore.pushToast({
+        tone: 'warning',
+        text: `Image read failed for ${result.failed.length} file(s). Those files were skipped.`,
+      });
     }
     emit('changed', previews.value.map((p) => p.file));
   } finally {
@@ -56,6 +82,11 @@ const onFiles = async (event: Event) => {
 
 const openPicker = () => {
   fileInput.value?.click();
+};
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
 };
 </script>
 
@@ -80,8 +111,8 @@ const openPicker = () => {
         <ImagePlus :size="24" />
       </button>
 
-      <div v-for="img in existing" :key="img.id" class="image-item relative">
-        <img :src="createObjectUrl(img.blob)" alt="existing" @click="fullscreen = createObjectUrl(img.blob)" />
+      <div v-for="img in existingWithUrls" :key="img.id" class="image-item relative">
+        <img :src="img.url" alt="existing" @click="fullscreen = img.url" @error="onImageError" />
         <button
           type="button"
           class="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm"
@@ -93,7 +124,7 @@ const openPicker = () => {
       </div>
 
       <div v-for="preview in previews" :key="preview.id" class="image-item relative">
-        <img :src="preview.url" alt="preview" @click="fullscreen = preview.url" />
+        <img :src="preview.url" alt="preview" @click="fullscreen = preview.url" @error="onImageError" />
         <button
           type="button"
           class="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm"
@@ -117,7 +148,6 @@ const openPicker = () => {
     >
       <X :size="18" />
     </Button>
-    <img :src="fullscreen" class="fullscreen-image" alt="fullscreen preview" @click.stop />
+    <img :src="fullscreen" class="fullscreen-image" alt="fullscreen preview" @click.stop @error="onImageError" />
   </div>
 </template>
-

@@ -1,11 +1,12 @@
-﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { CalendarClock, Pencil, Trash2 } from 'lucide-vue-next';
 import { useTrackerStore } from '../stores/trackerStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage } from '../types/tracker';
 import { useUiStore } from '../stores/uiStore';
+import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 import Card from '../components/ui/Card.vue';
 import Button from '../components/ui/Button.vue';
 
@@ -14,14 +15,27 @@ const router = useRouter();
 const trackerStore = useTrackerStore();
 const uiStore = useUiStore();
 const images = ref<StoredImage[]>([]);
-
-const createObjectUrl = (blob: Blob) => window.URL.createObjectURL(blob);
+const imageUrls = ref<Record<string, string>>({});
 const trackerId = computed(() => String(route.params.id));
 const tracker = computed(() => trackerStore.getById(trackerId.value));
+
+const rebuildImageUrls = () => {
+  Object.values(imageUrls.value).forEach((url) => URL.revokeObjectURL(url));
+  const next: Record<string, string> = {};
+  for (const image of images.value) {
+    next[image.id] = URL.createObjectURL(image.blob);
+  }
+  imageUrls.value = next;
+};
 
 onMounted(async () => {
   await trackerStore.refresh();
   images.value = await imageRepo.listByTrackerId(trackerId.value);
+  rebuildImageUrls();
+});
+
+onBeforeUnmount(() => {
+  Object.values(imageUrls.value).forEach((url) => URL.revokeObjectURL(url));
 });
 
 const remove = async () => {
@@ -29,6 +43,11 @@ const remove = async () => {
   if (!ok) return;
   await trackerStore.deleteTracker(trackerId.value);
   await router.push('/trackers');
+};
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
 };
 
 const deliveryReceiptLabel = computed(() => {
@@ -52,7 +71,7 @@ const deliveryReceiptLabel = computed(() => {
     <Card class="panel-card">
       <h3>Gallery</h3>
       <div class="image-grid image-grid-large">
-        <img v-for="image in images" :key="image.id" :src="createObjectUrl(image.blob)" alt="tracker image" />
+        <img v-for="image in images" :key="image.id" :src="imageUrls[image.id] || FALLBACK_IMAGE_DATA_URL" alt="tracker image" @error="onImageError" />
       </div>
     </Card>
 
@@ -64,4 +83,3 @@ const deliveryReceiptLabel = computed(() => {
     </Card>
   </section>
 </template>
-

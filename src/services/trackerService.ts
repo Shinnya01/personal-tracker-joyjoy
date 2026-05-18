@@ -2,6 +2,7 @@
 import { trackerRepo } from '../db/repositories/trackerRepo';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { activityRepo } from '../db/repositories/activityRepo';
+import { syncQueueRepo } from '../db/repositories/syncQueueRepo';
 import { createId, nowIso } from '../utils/date';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 
@@ -34,10 +35,12 @@ export const trackerService = {
       images: input.images ?? [],
       createdAt: now,
       updatedAt: now,
+      syncStatus: 'pending',
     };
 
-    await db.transaction('rw', db.trackers, db.activities, async () => {
+    await db.transaction('rw', db.trackers, db.activities, db.syncQueue, async () => {
       await trackerRepo.put(tracker);
+      await syncQueueRepo.put({ id: createId(), entityType: 'tracker', entityId: tracker.id, action: 'upsert', updatedAt: now });
       await activityRepo.put({
         id: createId(),
         trackerId: tracker.id,
@@ -59,10 +62,12 @@ export const trackerService = {
       ...patch,
       images: patch.images ?? existing.images ?? [],
       updatedAt: nowIso(),
+      syncStatus: 'pending',
     };
 
-    await db.transaction('rw', db.trackers, db.activities, async () => {
+    await db.transaction('rw', db.trackers, db.activities, db.syncQueue, async () => {
       await trackerRepo.put(updated);
+      await syncQueueRepo.put({ id: createId(), entityType: 'tracker', entityId: updated.id, action: 'upsert', updatedAt: updated.updatedAt });
       await activityRepo.put({
         id: createId(),
         trackerId: updated.id,
@@ -82,7 +87,11 @@ export const trackerService = {
     const imageIds = existing.images ?? [];
     const firstImage = imageIds[0] ? await imageRepo.getById(imageIds[0]) : undefined;
     const previewImageDataUrl = firstImage?.blob ? await this.blobToDataUrl(firstImage.blob) : undefined;
-    await db.transaction('rw', db.trackers, db.images, db.activities, async () => {
+    await db.transaction('rw', db.trackers, db.images, db.activities, db.syncQueue, async () => {
+      await syncQueueRepo.put({ id: createId(), entityType: 'tracker', entityId: id, action: 'delete', updatedAt: nowIso() });
+      for (const imageId of imageIds) {
+        await syncQueueRepo.put({ id: createId(), entityType: 'image', entityId: imageId, action: 'delete', updatedAt: nowIso() });
+      }
       await trackerRepo.delete(id);
       if (imageIds.length) await imageRepo.bulkDelete(imageIds);
       await activityRepo.put({
@@ -97,7 +106,12 @@ export const trackerService = {
   },
 
   async saveImages(trackerId: string, files: StoredImage[]) {
-    await imageRepo.bulkPut(files.map((file) => ({ ...file, trackerId })));
+    const timestamp = nowIso();
+    const prepared = files.map((file) => ({ ...file, trackerId, updatedAt: timestamp, syncStatus: 'pending' as const }));
+    await imageRepo.bulkPut(prepared);
+    for (const file of prepared) {
+      await syncQueueRepo.put({ id: createId(), entityType: 'image', entityId: file.id, action: 'upsert', updatedAt: timestamp });
+    }
   },
 };
 

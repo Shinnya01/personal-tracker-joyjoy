@@ -12,6 +12,8 @@ import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
+import { syncQueueRepo } from '../db/repositories/syncQueueRepo';
+import { createId, nowIso } from '../utils/date';
 
 const route = useRoute();
 const router = useRouter();
@@ -19,6 +21,7 @@ const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
 const uiStore = useUiStore();
 const existingImages = ref<StoredImage[]>([]);
+const removedExistingIds = ref<string[]>([]);
 const isSubmitting = ref(false);
 
 const trackerId = computed(() => (route.params.id ? String(route.params.id) : null));
@@ -78,6 +81,18 @@ const handleSubmit = async (payload: any) => {
       );
       if (!updated) return;
       await trackerService.saveImages(trackerId.value, images);
+      if (removedExistingIds.value.length) {
+        await imageRepo.bulkDelete(removedExistingIds.value);
+        for (const removedId of removedExistingIds.value) {
+          await syncQueueRepo.put({
+            id: createId(),
+            entityType: 'image',
+            entityId: removedId,
+            action: 'delete',
+            updatedAt: nowIso(),
+          });
+        }
+      }
     } else {
       const created = await trackerStore.upsertTracker({ ...base, images: images.map((img: StoredImage) => img.id) });
       if (!created) return;
@@ -101,6 +116,7 @@ const handleSubmit = async (payload: any) => {
 
 const removeExisting = async (imageId: string) => {
   existingImages.value = existingImages.value.filter((image) => image.id !== imageId);
+  removedExistingIds.value.push(imageId);
 };
 </script>
 

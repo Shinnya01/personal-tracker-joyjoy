@@ -1,47 +1,28 @@
-﻿import { ref } from 'vue';
+import { ref } from 'vue';
 import type { StoredImage } from '../types/tracker';
 import { createId, nowIso } from '../utils/date';
-
-const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
-  new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error('Unable to process image'));
-      resolve(blob);
-    }, type, quality);
-  });
+import { normalizeImageFile } from '../utils/image';
 
 export const useImageProcessor = () => {
   const previews = ref<Array<{ id: string; url: string; file: StoredImage }>>([]);
 
   const processFile = async (trackerId: string, file: File) => {
-    const bitmap = await createImageBitmap(file);
-    const max = 1600;
-    const ratio = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
-    const width = Math.round(bitmap.width * ratio);
-    const height = Math.round(bitmap.height * ratio);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Cannot read image context');
-
-    ctx.drawImage(bitmap, 0, 0, width, height);
-
-    const outputType = 'image/png';
-    const blob = await canvasToBlob(canvas, outputType);
+    const normalized = await normalizeImageFile(file);
+    const timestamp = nowIso();
 
     const image: StoredImage = {
       id: createId(),
       trackerId,
-      blob,
+      blob: normalized.blob,
       name: file.name,
-      type: outputType,
-      size: blob.size,
-      createdAt: nowIso(),
+      type: normalized.type,
+      size: normalized.size,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      syncStatus: 'pending',
     };
 
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(normalized.blob);
     previews.value.push({ id: image.id, url, file: image });
   };
 
@@ -73,4 +54,3 @@ export const useImageProcessor = () => {
 
   return { previews, processFiles, removePreview, clear };
 };
-

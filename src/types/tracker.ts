@@ -11,6 +11,9 @@ export interface TrackerItem {
   images?: string[];
   createdAt: string;
   updatedAt: string;
+  userId?: string;
+  syncStatus?: 'pending' | 'synced';
+  deletedAt?: string;
 }
 
 export interface StoredImage {
@@ -21,6 +24,11 @@ export interface StoredImage {
   type: string;
   size: number;
   createdAt: string;
+  updatedAt?: string;
+  userId?: string;
+  syncStatus?: 'pending' | 'synced';
+  imagePath?: string;
+  deletedAt?: string;
 }
 
 export interface ReminderSettings {
@@ -76,4 +84,12 @@ export interface ReminderBuckets {
   today: TrackerItem[];
   upcoming: TrackerItem[];
   overdue: TrackerItem[];
+}
+
+export interface SyncQueueItem {
+  id: string;
+  entityType: 'tracker' | 'image';
+  entityId: string;
+  action: 'upsert' | 'delete';
+  updatedAt: string;
 }

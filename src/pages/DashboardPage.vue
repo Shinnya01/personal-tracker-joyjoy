@@ -14,6 +14,7 @@ import { useTrackerStore } from '../stores/trackerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { ActivityLog, StoredImage, TrackerItem } from '../types/tracker';
 import { imageRepo } from '../db/repositories/imageRepo';
+import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
@@ -263,6 +264,11 @@ const pickCurrentMonth = () => {
   selectedSummaryMonth.value = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
   setMonthPickerOpen(false);
 };
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
+};
 </script>
 
 <template>
@@ -384,6 +390,7 @@ const pickCurrentMonth = () => {
             :src="activityThumbs[activity.id]"
             alt="activity tracker image"
             class="h-14 w-14 shrink-0 rounded-xl object-cover border border-[var(--border)]"
+            @error="onImageError"
           />
           <div
             v-else
@@ -432,6 +439,7 @@ const pickCurrentMonth = () => {
               :src="selectedImageUrl"
               alt="tracker image preview"
               class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain"
+              @error="onImageError"
             />
             <div class="flex justify-center">
               <Button

@@ -7,6 +7,7 @@ import Button from '../components/ui/Button.vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import type { ActivityLog } from '../types/tracker';
 import { imageRepo } from '../db/repositories/imageRepo';
+import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 
 const trackerStore = useTrackerStore();
 const activityThumbs = ref<Record<string, string>>({});
@@ -89,6 +90,11 @@ const activityDeliveryDate = (activity: ActivityLog) => {
   const end = new Date(tracker.deliveryReceiptEndDate).toLocaleDateString();
   return `${start} - ${end}`;
 };
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
+};
 </script>
 
 <template>
@@ -153,6 +159,7 @@ const activityDeliveryDate = (activity: ActivityLog) => {
             :src="activityThumbs[activity.id]"
             alt="activity tracker image"
             class="h-14 w-14 shrink-0 rounded-xl object-cover border border-[var(--border)]"
+            @error="onImageError"
           />
           <div
             v-else

@@ -16,6 +16,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useUiStore } from '../stores/uiStore';
 import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
+import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
@@ -124,6 +125,11 @@ const dismissForMonth = async () => {
   await settingsStore.dismissReminderForMonth(selected.value.id, thisMonthKey.value);
   uiStore.pushToast({ tone: 'success', text: 'Reminder dismissed for this month.' });
   closeReminderDialog();
+};
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
 };
 </script>
 
@@ -246,6 +252,7 @@ const dismissForMonth = async () => {
               :src="selectedImageUrl"
               alt="tracker image preview"
               class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain"
+              @error="onImageError"
             />
             <div class="flex justify-center">
               <Button

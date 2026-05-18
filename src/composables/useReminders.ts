@@ -2,11 +2,13 @@ import { computed, onMounted, onUnmounted } from 'vue';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useUiStore } from '../stores/uiStore';
+import { useAuthStore } from '../stores/authStore';
 
 export const useReminders = () => {
   const settingsStore = useSettingsStore();
   const trackerStore = useTrackerStore();
   const uiStore = useUiStore();
+  const authStore = useAuthStore();
 
   let timer: number | undefined;
   const onTrackerCreated = () => {
@@ -17,6 +19,7 @@ export const useReminders = () => {
   const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
 
   const runCheck = async () => {
+    if (!authStore.isLoggedIn) return;
     if (!settingsStore.isLoaded) {
       await settingsStore.load();
     }

@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useTrackerStore } from '../../stores/trackerStore';
 import { acquireGlobalScrollLock, releaseGlobalScrollLock } from '../../composables/useGlobalScrollLock';
 import { imageRepo } from '../../db/repositories/imageRepo';
+import { FALLBACK_IMAGE_DATA_URL } from '../../utils/image';
 import Card from '../ui/Card.vue';
 import Button from '../ui/Button.vue';
 
@@ -157,6 +158,11 @@ const itemStyle = (item: { dedupeKey?: string; trackerId?: string; title?: strin
     transition: isDragging ? 'none' : 'transform 180ms ease',
   };
 };
+
+const onImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.src = FALLBACK_IMAGE_DATA_URL;
+};
 </script>
 
 <template>
@@ -196,6 +202,7 @@ const itemStyle = (item: { dedupeKey?: string; trackerId?: string; title?: strin
                   :src="thumbUrls[item.trackerId]"
                   alt="alert tracker image"
                   class="h-16 w-16 shrink-0 rounded-xl border border-[var(--border)] object-cover"
+                  @error="onImageError"
                 />
                 <div
                   v-else

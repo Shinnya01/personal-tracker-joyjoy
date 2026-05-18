@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { useAuthStore } from '../stores/authStore';
+import { hasSupabaseConfig } from '../lib/supabase';
 
 export const routeNames = {
+  login: 'login',
   dashboard: 'dashboard',
   recentActivity: 'recent-activity',
   trackers: 'trackers',
@@ -12,6 +15,12 @@ export const routeNames = {
 } as const;
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: routeNames.login,
+    component: () => import('../pages/LoginPage.vue'),
+    meta: { public: true },
+  },
   {
     path: '/',
     component: () => import('../layouts/AppShell.vue'),
@@ -63,6 +72,20 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach(async (to) => {
+  if (!hasSupabaseConfig) return true;
+  const authStore = useAuthStore();
+  await authStore.init();
+  if (to.meta.public) {
+    if (authStore.isLoggedIn) return { name: routeNames.dashboard };
+    return true;
+  }
+  if (!authStore.isLoggedIn) {
+    return { name: routeNames.login };
+  }
+  return true;
 });
 
 export default router;
