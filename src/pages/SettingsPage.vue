@@ -29,7 +29,7 @@ const importMode = ref<'replace' | 'merge'>('replace');
 const reminderEnabled = ref(false);
 const selectedBackupFile = ref<File | null>(null);
 const darkMode = ref<'system' | 'light' | 'dark'>('system');
-const email = ref('');
+const username = ref('');
 const password = ref('');
 const DARK_MODE_OPTIONS = [
   { label: 'System (Default)', value: 'system' },
@@ -142,7 +142,7 @@ const updateDarkMode = async (value: 'system' | 'light' | 'dark') => {
 
 const signIn = async () => {
   try {
-    await authStore.signIn(email.value.trim(), password.value);
+    await authStore.signIn(username.value.trim(), password.value);
     uiStore.pushToast({ tone: 'success', text: 'Signed in.' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Sign in failed.';
@@ -152,7 +152,7 @@ const signIn = async () => {
 
 const signUp = async () => {
   try {
-    const result = await authStore.signUp(email.value.trim(), password.value);
+    const result = await authStore.signUp(username.value.trim(), password.value);
     if (result.signedIn) {
       uiStore.pushToast({ tone: 'success', text: 'Account created and signed in.' });
       return;
@@ -218,9 +218,9 @@ const signOut = async () => {
       </CardHeader>
       <CardContent class="grid gap-3">
         <p class="text-xs text-slate-500">Config: {{ hasSupabaseConfig ? 'Ready' : 'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY' }}</p>
-        <p class="text-xs text-slate-500">Status: {{ authStore.isLoggedIn ? `Logged in as ${authStore.user?.email}` : 'Logged out' }}</p>
+        <p class="text-xs text-slate-500">Status: {{ authStore.isLoggedIn ? `Logged in as ${(authStore.user?.email ?? '').split('@')[0]}` : 'Logged out' }}</p>
         <template v-if="!authStore.isLoggedIn">
-          <Input v-model="email" type="email" placeholder="Email" class="h-11 rounded-2xl text-sm" />
+          <Input v-model="username" type="text" placeholder="Username" class="h-11 rounded-2xl text-sm" />
           <Input v-model="password" type="password" placeholder="Password" class="h-11 rounded-2xl text-sm" />
           <div class="flex gap-2">
             <Button :disabled="authStore.isLoading || !hasSupabaseConfig" @click="signIn">Login</Button>

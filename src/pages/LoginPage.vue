@@ -15,7 +15,7 @@ import { hasSupabaseConfig } from '../lib/supabase';
 const router = useRouter();
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const email = ref('');
+const username = ref('');
 const password = ref('');
 
 onMounted(async () => {
@@ -25,7 +25,7 @@ onMounted(async () => {
 
 const signIn = async () => {
   try {
-    await authStore.signIn(email.value.trim(), password.value);
+    await authStore.signIn(username.value.trim(), password.value);
     await router.replace('/');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Sign in failed.';
@@ -35,7 +35,7 @@ const signIn = async () => {
 
 const signUp = async () => {
   try {
-    const result = await authStore.signUp(email.value.trim(), password.value);
+    const result = await authStore.signUp(username.value.trim(), password.value);
     if (result.signedIn) {
       uiStore.pushToast({ tone: 'success', text: 'Account created and signed in.' });
       await router.replace('/');
@@ -59,7 +59,7 @@ const signUp = async () => {
       </CardHeader>
       <CardContent class="grid gap-3">
         <p v-if="!hasSupabaseConfig" class="text-xs text-rose-600">Missing Supabase env config. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.</p>
-        <Input v-model="email" type="email" placeholder="Email" class="h-11 rounded-2xl text-sm" />
+        <Input v-model="username" type="text" placeholder="Username" class="h-11 rounded-2xl text-sm" />
         <Input v-model="password" type="password" placeholder="Password" class="h-11 rounded-2xl text-sm" />
         <div class="flex gap-2">
           <Button class="flex-1" :disabled="authStore.isLoading || !hasSupabaseConfig" @click="signIn">Login</Button>

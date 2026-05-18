@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+const USERNAME_DOMAIN = 'tracker.local';
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
   const isLoading = ref(false);
@@ -21,8 +23,16 @@ export const useAuthStore = defineStore('auth', () => {
     });
   };
 
-  const signUp = async (email: string, password: string) => {
+  const normalizeLoginId = (raw: string) => {
+    const value = raw.trim().toLowerCase();
+    if (!value) throw new Error('Username is required.');
+    if (value.includes('@')) return value;
+    return `${value}@${USERNAME_DOMAIN}`;
+  };
+
+  const signUp = async (loginId: string, password: string) => {
     if (!supabase) throw new Error('Supabase is not configured.');
+    const email = normalizeLoginId(loginId);
     isLoading.value = true;
     error.value = null;
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
@@ -36,15 +46,16 @@ export const useAuthStore = defineStore('auth', () => {
       return { signedIn: true };
     }
     try {
-      await signIn(email, password);
+      await signIn(loginId, password);
       return { signedIn: true };
     } catch {
       return { signedIn: false };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (loginId: string, password: string) => {
     if (!supabase) throw new Error('Supabase is not configured.');
+    const email = normalizeLoginId(loginId);
     isLoading.value = true;
     error.value = null;
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
