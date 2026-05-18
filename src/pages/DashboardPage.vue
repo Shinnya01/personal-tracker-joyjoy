@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import { Building2, CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, DatabaseBackup, ListChecks, Pen, Sparkles, Trash2, X } from 'lucide-vue-next';
+import { Building2, CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, DatabaseBackup, ListChecks, Pen, RefreshCw, Sparkles, Trash2, X } from 'lucide-vue-next';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
@@ -12,13 +12,19 @@ import DialogContent from '../components/ui/DialogContent.vue';
 import Select from '../components/ui/Select.vue';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useAuthStore } from '../stores/authStore';
+import { useUiStore } from '../stores/uiStore';
 import type { ActivityLog, StoredImage, TrackerItem } from '../types/tracker';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
+import { syncService } from '../services/syncService';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
+const uiStore = useUiStore();
 const now = ref(new Date());
+const isSyncing = ref(false);
 const selectedSummaryMonth = ref(
   `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
 );
@@ -269,13 +275,49 @@ const onImageError = (event: Event) => {
   const target = event.target as HTMLImageElement;
   target.src = FALLBACK_IMAGE_DATA_URL;
 };
+
+const syncNow = async () => {
+  if (!authStore.isLoggedIn) {
+    uiStore.pushToast({ tone: 'info', text: 'Login to sync data.' });
+    return;
+  }
+  if (!navigator.onLine) {
+    uiStore.pushToast({ tone: 'warning', text: 'Offline now. Sync will run when internet is back.' });
+    return;
+  }
+  if (isSyncing.value) return;
+  isSyncing.value = true;
+  try {
+    await syncService.syncNow();
+    await trackerStore.refresh();
+    uiStore.pushToast({ tone: 'success', text: 'Sync complete.' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Sync failed.';
+    uiStore.pushToast({ tone: 'error', text: message });
+  } finally {
+    isSyncing.value = false;
+  }
+};
 </script>
 
 <template>
   <section class="flex flex-col gap-6">
     <Card class="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-white to-rose-50/50 shadow-[var(--shadow-soft)]">
       <CardHeader class="relative z-10 p-5">
-        <p class="text-sm font-semibold text-[var(--accent-strong)]">{{ greetingText }}</p>
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-semibold text-[var(--accent-strong)]">{{ greetingText }}</p>
+          <Button
+            v-if="authStore.isLoggedIn"
+            size="sm"
+            variant="secondary"
+            class="rounded-xl"
+            :disabled="isSyncing"
+            @click="syncNow"
+          >
+            <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Syncing' : 'Sync' }}
+          </Button>
+        </div>
         <CardTitle class="mt-2 text-4xl leading-tight font-extrabold text-slate-900">Let's make today count.</CardTitle>
         <CardDescription class="mt-3 text-sm text-slate-500">Stay organized and keep everything on track.</CardDescription>
       </CardHeader>
