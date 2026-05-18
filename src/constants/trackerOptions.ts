@@ -6,6 +6,7 @@ export const COMPANY_OPTIONS = [
 
 export const CATEGORY_OPTIONS = [
   { label: 'Aggregates', value: 'Aggregates' },
+  { label: 'Billing', value: 'Billing' },
   { label: 'Diesel', value: 'Diesel' },
   { label: 'Spareparts', value: 'Spareparts' },
   { label: 'Ready Mix Concrete', value: 'Ready Mix Concrete' },
