@@ -39,7 +39,8 @@ export const useTrackerQuery = (source: () => TrackerItem[]) => {
       );
     }
     if (company !== 'all') {
-      items = items.filter((item) => (item.company ?? '') === company);
+      const companyFilter = company.trim().toLowerCase();
+      items = items.filter((item) => (item.company ?? '').trim().toLowerCase().startsWith(companyFilter));
     }
     if (category !== 'all') {
       items = items.filter((item) => (item.category ?? '') === category);

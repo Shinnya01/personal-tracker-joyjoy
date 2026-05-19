@@ -56,10 +56,9 @@ onMounted(async () => {
   await authStore.init();
   await settingsStore.load();
   await ensureDisplayNameFromAuth();
-  await trackerStore.refresh();
   if (authStore.isLoggedIn && navigator.onLine) {
     await syncService.syncNow();
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
   }
   window.addEventListener('online', onOnlineSync);
   window.addEventListener('touchstart', onPullStart, { passive: true });
@@ -92,7 +91,7 @@ watch(
     await ensureDisplayNameFromAuth();
     if (!navigator.onLine) return;
     await syncService.syncNow();
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
   },
 );
 
@@ -108,7 +107,7 @@ onBeforeUnmount(() => {
 const onOnlineSync = async () => {
   if (!authStore.isLoggedIn) return;
   await syncService.syncNow();
-  await trackerStore.refresh();
+  await trackerStore.refresh(true);
 };
 
 const runPullRefresh = async () => {
@@ -118,7 +117,7 @@ const runPullRefresh = async () => {
     if (authStore.isLoggedIn && navigator.onLine) {
       await syncService.syncNow();
     }
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
   } finally {
     isPullRefreshing.value = false;
   }

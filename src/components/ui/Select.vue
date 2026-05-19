@@ -25,10 +25,12 @@ withDefaults(
     class?: string;
     placeholder?: string;
     options: readonly SelectOption[];
+    align?: 'start' | 'center' | 'end';
   }>(),
   {
     class: '',
     placeholder: 'Select an option',
+    align: 'end',
   },
 );
 </script>
@@ -44,7 +46,7 @@ withDefaults(
       <SelectContent
         position="popper"
         side="bottom"
-        align="end"
+        :align="$props.align"
         :side-offset="8"
         :align-offset="0"
         :avoid-collisions="false"

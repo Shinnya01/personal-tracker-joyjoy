@@ -6,14 +6,6 @@ import router from './router';
 import './style.css';
 import 'vue-sonner/style.css';
 
-if ('serviceWorker' in navigator) {
-  void navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((registration) => {
-      void registration.unregister();
-    });
-  });
-}
-
 const app = createApp(App);
 
 app.use(createPinia());

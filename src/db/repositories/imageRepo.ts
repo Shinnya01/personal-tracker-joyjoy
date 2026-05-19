@@ -1,6 +1,23 @@
 import type { StoredImage } from '../../types/tracker';
 import { TRACKER_IMAGES_BUCKET, ensureNoError, imagePathFor, requireSupabase, requireUserId } from '../../lib/cloud';
 
+const imageByIdCache = new Map<string, StoredImage>();
+const imagesByTrackerIdCache = new Map<string, StoredImage[]>();
+let allImagesCache: StoredImage[] | null = null;
+
+const cacheImages = (items: StoredImage[]) => {
+  items.forEach((item) => imageByIdCache.set(item.id, item));
+};
+
+const resetImageCaches = (trackerId?: string) => {
+  allImagesCache = null;
+  if (trackerId) {
+    imagesByTrackerIdCache.delete(trackerId);
+  } else {
+    imagesByTrackerIdCache.clear();
+  }
+};
+
 const toStoredImage = async (row: any): Promise<StoredImage | null> => {
   const client = requireSupabase();
   const path = String(row.image_path ?? '').trim();
@@ -50,32 +67,51 @@ const upsertRowFor = async (item: StoredImage) => {
 
 export const imageRepo = {
   async list() {
+    if (allImagesCache) return allImagesCache;
     const client = requireSupabase();
     const userId = await requireUserId();
     const { data, error } = await client.from('tracker_images').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
     ensureNoError(error, 'Failed to load images');
     const mapped = await Promise.all((data ?? []).map(toStoredImage));
-    return mapped.filter((item): item is StoredImage => Boolean(item));
+    const items = mapped.filter((item): item is StoredImage => Boolean(item));
+    allImagesCache = items;
+    cacheImages(items);
+    return items;
   },
   async listByTrackerId(trackerId: string) {
+    const cached = imagesByTrackerIdCache.get(trackerId);
+    if (cached) return cached;
     const client = requireSupabase();
     const userId = await requireUserId();
     const { data, error } = await client.from('tracker_images').select('*').eq('user_id', userId).eq('tracker_id', trackerId).order('updated_at', { ascending: false });
     ensureNoError(error, `Failed to load tracker images (${trackerId})`);
     const mapped = await Promise.all((data ?? []).map(toStoredImage));
-    return mapped.filter((item): item is StoredImage => Boolean(item));
+    const items = mapped.filter((item): item is StoredImage => Boolean(item));
+    imagesByTrackerIdCache.set(trackerId, items);
+    cacheImages(items);
+    return items;
   },
   async getById(id: string) {
+    const cached = imageByIdCache.get(id);
+    if (cached) return cached;
     const client = requireSupabase();
     const userId = await requireUserId();
     const { data, error } = await client.from('tracker_images').select('*').eq('user_id', userId).eq('id', id).maybeSingle();
     ensureNoError(error, `Failed to load image ${id}`);
     if (!data) return undefined;
-    return await toStoredImage(data) ?? undefined;
+    const item = await toStoredImage(data) ?? undefined;
+    if (item) imageByIdCache.set(item.id, item);
+    return item;
   },
-  put: upsertRowFor,
+  async put(item: StoredImage) {
+    await upsertRowFor(item);
+    resetImageCaches(item.trackerId);
+    imageByIdCache.delete(item.id);
+  },
   async bulkPut(items: StoredImage[]) {
     for (const item of items) await upsertRowFor(item);
+    resetImageCaches();
+    items.forEach((item) => imageByIdCache.delete(item.id));
   },
   async bulkDelete(ids: string[]) {
     if (!ids.length) return;
@@ -90,9 +126,13 @@ export const imageRepo = {
     }
     const { error: dbError } = await client.from('tracker_images').delete().eq('user_id', userId).in('id', ids);
     ensureNoError(dbError, 'Failed to delete images');
+    resetImageCaches();
+    ids.forEach((id) => imageByIdCache.delete(id));
   },
   async clear() {
     const all = await imageRepo.list();
     await imageRepo.bulkDelete(all.map((item) => item.id));
+    resetImageCaches();
+    imageByIdCache.clear();
   },
 };

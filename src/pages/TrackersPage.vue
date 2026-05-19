@@ -21,6 +21,8 @@ import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 import { routeNames } from '../router';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
+import { trackerRepo } from '../db/repositories/trackerRepo';
+import { useTrackerQuery } from '../composables/useTrackerQuery';
 
 const router = useRouter();
 const trackerStore = useTrackerStore();
@@ -31,6 +33,7 @@ const imageDialogOpen = ref(false);
 const selectedImages = ref<StoredImage[]>([]);
 const selectedImageIndex = ref(0);
 const selectedTracker = ref<TrackerItem | null>(null);
+const isSelectedImageReady = ref(false);
 const dragOffset = ref<Record<string, number>>({});
 const startXById = new Map<string, number>();
 const maxOffsetById = new Map<string, number>();
@@ -41,9 +44,42 @@ const SWIPE_CLOSE_THRESHOLD = 40;
 const draggedDistanceById = new Map<string, number>();
 
 const objectUrls = new Map<string, string>();
+const PAGE_SIZE = 10;
+const pagedTrackers = ref<TrackerItem[]>([]);
+const isLoadingPage = ref(false);
+const isLoadingMore = ref(false);
+const hasMore = ref(true);
+const pageOffset = ref(0);
+const { filters, filteredTrackers } = useTrackerQuery(() => pagedTrackers.value);
+
+const loadInitialPage = async () => {
+  if (isLoadingPage.value) return;
+  isLoadingPage.value = true;
+  try {
+    const firstPage = await trackerRepo.listPage(PAGE_SIZE, 0);
+    pagedTrackers.value = firstPage;
+    pageOffset.value = firstPage.length;
+    hasMore.value = firstPage.length === PAGE_SIZE;
+  } finally {
+    isLoadingPage.value = false;
+  }
+};
+
+const loadMore = async () => {
+  if (isLoadingMore.value || !hasMore.value) return;
+  isLoadingMore.value = true;
+  try {
+    const nextPage = await trackerRepo.listPage(PAGE_SIZE, pageOffset.value);
+    pagedTrackers.value = [...pagedTrackers.value, ...nextPage];
+    pageOffset.value += nextPage.length;
+    hasMore.value = nextPage.length === PAGE_SIZE;
+  } finally {
+    isLoadingMore.value = false;
+  }
+};
 
 onMounted(() => {
-  void trackerStore.refresh();
+  void loadInitialPage();
 });
 
 const cleanupPreviewState = () => {
@@ -52,6 +88,7 @@ const cleanupPreviewState = () => {
   selectedImages.value = [];
   selectedImageIndex.value = 0;
   selectedTracker.value = null;
+  isSelectedImageReady.value = false;
 };
 
 onBeforeUnmount(() => {
@@ -75,6 +112,7 @@ const imageUrl = (img: StoredImage) => {
 };
 
 const openImageDialog = (img: StoredImage) => {
+  isSelectedImageReady.value = false;
   selectedImageUrl.value = imageUrl(img);
   void nextTick(() => {
     imageDialogOpen.value = true;
@@ -95,12 +133,14 @@ const openTrackerImagePreview = async (item: TrackerItem) => {
 const showPrev = () => {
   if (selectedImageIndex.value <= 0) return;
   selectedImageIndex.value -= 1;
+  isSelectedImageReady.value = false;
   selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
 };
 
 const showNext = () => {
   if (selectedImageIndex.value >= selectedImages.value.length - 1) return;
   selectedImageIndex.value += 1;
+  isSelectedImageReady.value = false;
   selectedImageUrl.value = imageUrl(selectedImages.value[selectedImageIndex.value]);
 };
 
@@ -188,6 +228,8 @@ const deleteTracker = async (item: TrackerItem) => {
   if (!ok) return;
   try {
     await trackerStore.deleteTracker(item.id);
+    pagedTrackers.value = pagedTrackers.value.filter((tracker) => tracker.id !== item.id);
+    pageOffset.value = pagedTrackers.value.length;
     uiStore.pushToast({ tone: 'success', text: 'Tracker deleted.' });
     dragOffset.value[item.id] = 0;
     if (actionOpenId.value === item.id) actionOpenId.value = null;
@@ -209,6 +251,11 @@ const cardStyle = (id: string) => {
 const onImageError = (event: Event) => {
   const target = event.target as HTMLImageElement;
   target.src = FALLBACK_IMAGE_DATA_URL;
+  isSelectedImageReady.value = true;
+};
+
+const onPreviewImageLoad = () => {
+  isSelectedImageReady.value = true;
 };
 </script>
 
@@ -235,11 +282,11 @@ const onImageError = (event: Event) => {
       <div class="pointer-events-none absolute inset-0 bg-radial-[at_85%_5%] from-rose-300/30 via-transparent to-transparent"></div>
     </Card>
 
-    <TrackerFilters v-model="trackerStore.filters" />
+    <TrackerFilters v-model="filters" />
 
     <div class="stack">
-      <Skeleton v-if="trackerStore.isLoading" class="h-24 w-full" />
-      <Card v-else-if="!trackerStore.filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
+      <Skeleton v-if="isLoadingPage" class="h-24 w-full" />
+      <Card v-else-if="!filteredTrackers.length" class="empty-state">No trackers found. Create your first tracker.</Card>
       <TransitionGroup
         v-else
         name="tracker-list"
@@ -247,7 +294,7 @@ const onImageError = (event: Event) => {
         class="stack"
       >
         <div
-          v-for="item in trackerStore.filteredTrackers"
+          v-for="item in filteredTrackers"
           :key="item.id"
           :ref="(el) => setCardRef(item.id, el)"
           class="relative overflow-hidden rounded-3xl border border-[var(--border)]"
@@ -283,6 +330,15 @@ const onImageError = (event: Event) => {
           </button>
         </div>
       </TransitionGroup>
+      <Button
+        v-if="hasMore && !filters.search.trim() && filters.company === 'all' && filters.category === 'all' && !filters.updatedAtStart && !filters.updatedAtEnd"
+        variant="secondary"
+        class="w-full rounded-2xl"
+        :disabled="isLoadingMore"
+        @click="loadMore"
+      >
+        {{ isLoadingMore ? 'Loading...' : 'Load more' }}
+      </Button>
     </div>
 
     <Dialog :open="imageDialogOpen" @update:open="(open) => !open && closeImageDialog()">
@@ -313,13 +369,18 @@ const onImageError = (event: Event) => {
                 <ChevronLeft :size="18" />
               </Button>
             </div>
-            <img
-              v-if="selectedImageUrl"
-              :src="selectedImageUrl"
-              alt="tracker image preview"
-              class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain"
-              @error="onImageError"
-            />
+            <div class="relative min-h-[180px] w-full">
+              <div v-if="selectedImageUrl && !isSelectedImageReady" class="absolute inset-0 animate-pulse rounded-xl bg-slate-200/80"></div>
+              <img
+                v-if="selectedImageUrl"
+                :src="selectedImageUrl"
+                alt="tracker image preview"
+                class="max-h-[56vh] w-auto max-w-full justify-self-center rounded-xl object-contain transition-opacity duration-150"
+                :class="{ 'opacity-0': !isSelectedImageReady }"
+                @load="onPreviewImageLoad"
+                @error="onImageError"
+              />
+            </div>
             <div class="flex justify-center">
               <Button
                 v-if="selectedImages.length > 1"

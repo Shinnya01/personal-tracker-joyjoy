@@ -11,6 +11,8 @@ const props = withDefaults(defineProps<{ tracker: TrackerItem; showNotes?: boole
 });
 const thumbUrl = ref<string | null>(null);
 const imageCount = ref(0);
+const isThumbLoading = ref(false);
+const isThumbReady = ref(false);
 let activeThumbUrl: string | null = null;
 
 const timeAgoPh = (iso: string) => {
@@ -49,13 +51,19 @@ watch(
     }
 
     thumbUrl.value = null;
+    isThumbLoading.value = true;
+    isThumbReady.value = false;
     const images = await imageRepo.listByTrackerId(trackerId);
     imageCount.value = images.length;
     const image = images[0];
-    if (!image?.blob) return;
+    if (!image?.blob) {
+      isThumbLoading.value = false;
+      return;
+    }
 
     activeThumbUrl = URL.createObjectURL(image.blob);
     thumbUrl.value = activeThumbUrl;
+    isThumbLoading.value = false;
   },
   { immediate: true },
 );
@@ -70,6 +78,11 @@ onBeforeUnmount(() => {
 const onImageError = (event: Event) => {
   const target = event.target as HTMLImageElement;
   target.src = FALLBACK_IMAGE_DATA_URL;
+  isThumbReady.value = true;
+};
+
+const onImageLoaded = () => {
+  isThumbReady.value = true;
 };
 </script>
 
@@ -91,8 +104,17 @@ const onImageError = (event: Event) => {
           <span class="min-w-0 whitespace-normal break-words">Delivery Receipt: {{ deliveryReceiptLabel(props.tracker) }}</span>
         </p>
       </div>
-      <div v-if="thumbUrl" class="relative">
-        <img :src="thumbUrl" alt="thumbnail" class="tracker-thumb tracker-thumb-box" @error="onImageError" />
+      <div v-if="thumbUrl || isThumbLoading" class="relative">
+        <div v-if="isThumbLoading || !isThumbReady" class="tracker-thumb tracker-thumb-box animate-pulse bg-slate-200/80"></div>
+        <img
+          v-if="thumbUrl"
+          :src="thumbUrl"
+          alt="thumbnail"
+          class="tracker-thumb tracker-thumb-box"
+          :class="{ hidden: !isThumbReady }"
+          @load="onImageLoaded"
+          @error="onImageError"
+        />
         <div v-if="imageCount > 1"
           class="absolute inset-0 grid place-items-center rounded-[inherit] bg-black/40 text-sm font-bold text-white">
           +{{ imageCount - 1 }}

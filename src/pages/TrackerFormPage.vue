@@ -92,7 +92,6 @@ const handleSubmit = async (payload: any) => {
       await trackerService.saveImages(created.id, images);
       window.dispatchEvent(new Event('tracker-created'));
     }
-    await trackerStore.refresh();
     showDueAlertsNow();
     uiStore.pushToast({
       tone: 'success',

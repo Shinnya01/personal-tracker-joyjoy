@@ -11,16 +11,19 @@ export const useTrackerStore = defineStore('tracker', () => {
   const trackers = ref<TrackerItem[]>([]);
   const activities = ref<ActivityLog[]>([]);
   const isLoading = ref(false);
+  const hasLoadedOnce = ref(false);
 
   const { filters, filteredTrackers } = useTrackerQuery(() => trackers.value);
   const { stats, reminderBuckets } = useDashboardStats(() => trackers.value);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
+    if (!force && hasLoadedOnce.value) return;
     isLoading.value = true;
     try {
       const [t, a] = await Promise.all([trackerRepo.list(), activityRepo.listRecent(20)]);
       trackers.value = t;
       activities.value = a;
+      hasLoadedOnce.value = true;
     } finally {
       isLoading.value = false;
     }
@@ -28,13 +31,13 @@ export const useTrackerStore = defineStore('tracker', () => {
 
   const upsertTracker = async (payload: TrackerWriteInput, id?: string) => {
     const tracker = id ? await trackerService.update(id, payload) : await trackerService.create(payload);
-    await refresh();
+    await refresh(true);
     return tracker;
   };
 
   const deleteTracker = async (id: string) => {
     await trackerService.remove(id);
-    await refresh();
+    await refresh(true);
   };
 
   const getById = computed(() => (id: string) => trackers.value.find((item) => item.id === id));
@@ -47,6 +50,7 @@ export const useTrackerStore = defineStore('tracker', () => {
     filteredTrackers,
     stats,
     reminderBuckets,
+    hasLoadedOnce,
     getById,
     refresh,
     upsertTracker,

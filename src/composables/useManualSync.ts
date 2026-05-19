@@ -23,7 +23,7 @@ export const useManualSync = () => {
     isSyncing.value = true;
     try {
       await syncService.syncNow();
-      await trackerStore.refresh();
+      await trackerStore.refresh(true);
       uiStore.pushToast({ tone: 'success', text: 'Sync complete.' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sync failed.';

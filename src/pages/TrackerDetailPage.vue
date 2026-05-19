@@ -18,20 +18,24 @@ const uiStore = useUiStore();
 const { authStore, isSyncing, syncNow } = useManualSync();
 const images = ref<StoredImage[]>([]);
 const imageUrls = ref<Record<string, string>>({});
+const imageReady = ref<Record<string, boolean>>({});
 const trackerId = computed(() => String(route.params.id));
 const tracker = computed(() => trackerStore.getById(trackerId.value));
 
 const rebuildImageUrls = () => {
   Object.values(imageUrls.value).forEach((url) => URL.revokeObjectURL(url));
   const next: Record<string, string> = {};
+  const ready: Record<string, boolean> = {};
   for (const image of images.value) {
     next[image.id] = URL.createObjectURL(image.blob);
+    ready[image.id] = false;
   }
   imageUrls.value = next;
+  imageReady.value = ready;
 };
 
 onMounted(async () => {
-  await trackerStore.refresh();
+  if (!tracker.value) await trackerStore.refresh();
   images.value = await imageRepo.listByTrackerId(trackerId.value);
   rebuildImageUrls();
 });
@@ -50,6 +54,12 @@ const remove = async () => {
 const onImageError = (event: Event) => {
   const target = event.target as HTMLImageElement;
   target.src = FALLBACK_IMAGE_DATA_URL;
+  const id = target.dataset.imageId;
+  if (id) imageReady.value[id] = true;
+};
+
+const onImageLoad = (id: string) => {
+  imageReady.value[id] = true;
 };
 
 const deliveryReceiptLabel = computed(() => {
@@ -86,7 +96,18 @@ const deliveryReceiptLabel = computed(() => {
     <Card class="panel-card">
       <h3>Gallery</h3>
       <div class="image-grid image-grid-large">
-        <img v-for="image in images" :key="image.id" :src="imageUrls[image.id] || FALLBACK_IMAGE_DATA_URL" alt="tracker image" @error="onImageError" />
+        <div v-for="image in images" :key="image.id" class="relative overflow-hidden rounded-2xl">
+          <div v-if="!imageReady[image.id]" class="absolute inset-0 animate-pulse bg-slate-200/80"></div>
+          <img
+            :src="imageUrls[image.id] || FALLBACK_IMAGE_DATA_URL"
+            :data-image-id="image.id"
+            alt="tracker image"
+            :class="{ 'opacity-0': !imageReady[image.id] }"
+            class="transition-opacity duration-150"
+            @load="onImageLoad(image.id)"
+            @error="onImageError"
+          />
+        </div>
       </div>
     </Card>
 

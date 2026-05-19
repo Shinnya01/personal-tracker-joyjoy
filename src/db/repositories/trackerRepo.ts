@@ -39,6 +39,20 @@ export const trackerRepo = {
     ensureNoError(error, 'Failed to load trackers');
     return (data ?? []).map(toTracker);
   },
+  async listPage(limit: number, offset: number) {
+    const client = requireSupabase();
+    const userId = await requireUserId();
+    const from = Math.max(0, offset);
+    const to = from + Math.max(1, limit) - 1;
+    const { data, error } = await client
+      .from('trackers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .range(from, to);
+    ensureNoError(error, 'Failed to load tracker page');
+    return (data ?? []).map(toTracker);
+  },
   async getById(id: string) {
     const client = requireSupabase();
     const userId = await requireUserId();

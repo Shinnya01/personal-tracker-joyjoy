@@ -83,7 +83,7 @@ const importBackup = async () => {
 
   try {
     await backup.importJson(file, importMode.value);
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
     uiStore.pushToast({
       tone: 'success',
       text: `Backup imported successfully (${importMode.value === 'replace' ? 'Replace All' : 'Merge by ID'}).`,
@@ -103,7 +103,7 @@ const clearData = async () => {
   if (!ok) return;
   try {
     await backupService.clearAllData(false);
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
     uiStore.pushToast({
       tone: 'success',
       text: 'All tracker data has been cleared.',
@@ -123,7 +123,7 @@ const resetApp = async () => {
   try {
     await backupService.clearAllData(true);
     await settingsStore.load();
-    await trackerStore.refresh();
+    await trackerStore.refresh(true);
     uiStore.pushToast({
       tone: 'success',
       text: 'App reset complete.',

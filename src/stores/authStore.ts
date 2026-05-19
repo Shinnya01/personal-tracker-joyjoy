@@ -9,18 +9,26 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
-  let initialized = false;
+  const isInitialized = ref(!supabase);
+  let initPromise: Promise<void> | null = null;
 
   const isLoggedIn = computed(() => Boolean(user.value));
 
   const init = async () => {
-    if (!supabase || initialized) return;
-    initialized = true;
-    const { data } = await supabase.auth.getSession();
-    user.value = data.session?.user ?? null;
-    supabase.auth.onAuthStateChange((_event, session) => {
-      user.value = session?.user ?? null;
-    });
+    if (!supabase) {
+      isInitialized.value = true;
+      return;
+    }
+    if (initPromise) return initPromise;
+    initPromise = (async () => {
+      const { data } = await supabase.auth.getSession();
+      user.value = data.session?.user ?? null;
+      supabase.auth.onAuthStateChange((_event, session) => {
+        user.value = session?.user ?? null;
+      });
+      isInitialized.value = true;
+    })();
+    return initPromise;
   };
 
   const normalizeLoginId = (raw: string) => {
@@ -84,5 +92,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  return { user, isLoading, error, isLoggedIn, init, signUp, signIn, signOut, signInAnonymously };
+  return { user, isLoading, error, isLoggedIn, isInitialized, init, signUp, signIn, signOut, signInAnonymously };
 });

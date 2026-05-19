@@ -111,7 +111,7 @@ const clearEnd = () => {
         <Select v-model="model.sort" :options="SORT_OPTIONS" class="h-11 rounded-2xl text-sm" />
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <Select v-model="model.company" :options="COMPANY_FILTER_OPTIONS" class="h-11 rounded-2xl text-sm" />
+        <Select v-model="model.company" :options="COMPANY_FILTER_OPTIONS" align="start" class="h-11 rounded-2xl text-sm" />
         <Select v-model="model.category" :options="CATEGORY_FILTER_OPTIONS" class="h-11 rounded-2xl text-sm" />
       </div>
       <div class="grid gap-1">
@@ -172,7 +172,7 @@ const clearEnd = () => {
           <PopoverPortal>
             <PopoverContent
               side="bottom"
-              align="start"
+              align="end"
               :side-offset="8"
               :avoid-collisions="false"
               class="z-50 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-soft)]"
