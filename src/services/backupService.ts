@@ -4,6 +4,7 @@ import { settingsRepo } from '../db/repositories/settingsRepo';
 import { trackerRepo } from '../db/repositories/trackerRepo';
 import { createId, nowIso } from '../utils/date';
 import type { BackupImportMode, BackupPayload, StoredImage } from '../types/tracker';
+import { requireUserId } from '../lib/cloud';
 
 const blobToBase64 = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -52,6 +53,11 @@ export const backupService = {
   },
 
   async importPayload(payload: BackupPayload, mode: BackupImportMode) {
+    if (!navigator.onLine) {
+      throw new Error('Internet connection is required for import.');
+    }
+    await requireUserId();
+
     const images: StoredImage[] = payload.images.map((img) => ({
       id: img.id,
       trackerId: img.trackerId,
@@ -63,7 +69,11 @@ export const backupService = {
     }));
 
     if (mode === 'replace') {
-      await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+      await Promise.all([
+        trackerRepo.clear(),
+        imageRepo.clear(),
+        activityRepo.clear().catch(() => undefined),
+      ]);
     }
 
     await trackerRepo.bulkPut(payload.trackers);
@@ -77,7 +87,7 @@ export const backupService = {
         message: `Imported backup in ${mode} mode`,
         createdAt: nowIso(),
       },
-    ]);
+    ]).catch(() => undefined);
   },
 
   async clearAllData(resetSettings = false) {
