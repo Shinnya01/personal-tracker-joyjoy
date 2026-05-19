@@ -18,6 +18,11 @@ const authStore = useAuthStore();
 const uiStore = useUiStore();
 const APP_VERSION_KEY = 'tracker:last-seen-app-version';
 const APP_VERSION = __APP_VERSION__;
+const LOADING_IMAGE_SRC = '/loading-avatar.png';
+const loadingImageSrc = ref(LOADING_IMAGE_SRC);
+const isAppBooting = ref(true);
+const loadingDots = ref(1);
+let loadingDotsTimer: number | undefined;
 const isPullRefreshing = ref(false);
 const pullStartY = ref<number | null>(null);
 const pullDistance = ref(0);
@@ -36,20 +41,28 @@ const { runCheck: runReminderCheck } = useReminders();
 useInteractionRecovery();
 
 onMounted(async () => {
-  const lastSeenVersion = localStorage.getItem(APP_VERSION_KEY);
-  if (lastSeenVersion !== APP_VERSION) {
-    uiStore.pushToast({
-      tone: 'success',
-      text: lastSeenVersion ? `App updated to ${APP_VERSION}` : `Running app version ${APP_VERSION}`,
-    });
-    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
-  }
+  loadingDotsTimer = window.setInterval(() => {
+    loadingDots.value = loadingDots.value >= 3 ? 1 : loadingDots.value + 1;
+  }, 450);
 
-  await authStore.init();
-  await settingsStore.load();
-  if (authStore.isLoggedIn && navigator.onLine) {
-    await syncService.syncNow();
-    await trackerStore.refresh(true);
+  try {
+    const lastSeenVersion = localStorage.getItem(APP_VERSION_KEY);
+    if (lastSeenVersion !== APP_VERSION) {
+      uiStore.pushToast({
+        tone: 'success',
+        text: lastSeenVersion ? `App updated to ${APP_VERSION}` : `Running app version ${APP_VERSION}`,
+      });
+      localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    }
+
+    await authStore.init();
+    await settingsStore.load();
+    if (authStore.isLoggedIn && navigator.onLine) {
+      await syncService.syncNow();
+      await trackerStore.refresh(true);
+    }
+  } finally {
+    isAppBooting.value = false;
   }
   window.addEventListener('online', onOnlineSync);
   window.addEventListener('touchstart', onPullStart, { passive: true });
@@ -73,6 +86,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  if (loadingDotsTimer) window.clearInterval(loadingDotsTimer);
   window.removeEventListener('online', onOnlineSync);
   window.removeEventListener('touchstart', onPullStart);
   window.removeEventListener('touchmove', onPullMove);
@@ -129,18 +143,45 @@ const onPullEnd = async () => {
   pullDistance.value = 0;
   didPullTrigger.value = false;
 };
+
+const onLoadingImageError = () => {
+  if (loadingImageSrc.value.endsWith('.png')) {
+    loadingImageSrc.value = '/loading-avatar.jpg';
+  }
+};
 </script>
 
 <template>
-  <AppLockGate />
-  <ConfirmDialog />
-  <ReminderAlertDialog v-if="authStore.isLoggedIn" />
-  <Toaster rich-colors position="bottom-right" />
   <div
-    v-show="pullIndicatorVisible"
-    class="pointer-events-none fixed left-1/2 z-[120] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-slate-600 shadow-[var(--shadow-soft)] transition-all duration-150"
-    :style="{ top: `${Math.min(16 + pullDistance * 0.22, 52)}px`, opacity: isPullRefreshing ? 1 : Math.max(0.35, pullIndicatorProgress) }"
+    v-if="isAppBooting"
+    class="fixed inset-0 z-[300] grid place-items-center"
+    style="background:
+      radial-gradient(circle at 12% -18%, rgba(228, 114, 166, 0.28), transparent 48%),
+      radial-gradient(circle at 88% 8%, rgba(228, 114, 166, 0.16), transparent 42%),
+      radial-gradient(circle at 50% 100%, rgba(228, 114, 166, 0.09), transparent 52%),
+      linear-gradient(180deg, #0f141c 0%, #0d1117 65%);"
   >
-    {{ pullIndicatorText }}
+    <div class="dialog grid place-items-center gap-3 py-7">
+      <img
+        :src="loadingImageSrc"
+        alt="Loading"
+        class="h-20 w-20 animate-spin rounded-full object-cover"
+        @error="onLoadingImageError"
+      />
+      <p class="text-sm font-semibold text-slate-700">Loading{{ '.'.repeat(loadingDots) }}</p>
+    </div>
   </div>
+  <template v-else>
+    <AppLockGate />
+    <ConfirmDialog />
+    <ReminderAlertDialog v-if="authStore.isLoggedIn" />
+    <Toaster rich-colors position="bottom-right" />
+    <div
+      v-show="pullIndicatorVisible"
+      class="pointer-events-none fixed left-1/2 z-[120] -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-slate-600 shadow-[var(--shadow-soft)] transition-all duration-150"
+      :style="{ top: `${Math.min(16 + pullDistance * 0.22, 52)}px`, opacity: isPullRefreshing ? 1 : Math.max(0.35, pullIndicatorProgress) }"
+    >
+      {{ pullIndicatorText }}
+    </div>
+  </template>
 </template>
