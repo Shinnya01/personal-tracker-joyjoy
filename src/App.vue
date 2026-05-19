@@ -16,6 +16,8 @@ const settingsStore = useSettingsStore();
 const trackerStore = useTrackerStore();
 const authStore = useAuthStore();
 const uiStore = useUiStore();
+const APP_VERSION_KEY = 'tracker:last-seen-app-version';
+const APP_VERSION = __APP_VERSION__;
 const isPullRefreshing = ref(false);
 const pullStartY = ref<number | null>(null);
 const pullDistance = ref(0);
@@ -34,6 +36,15 @@ const { runCheck: runReminderCheck } = useReminders();
 useInteractionRecovery();
 
 onMounted(async () => {
+  const lastSeenVersion = localStorage.getItem(APP_VERSION_KEY);
+  if (lastSeenVersion !== APP_VERSION) {
+    uiStore.pushToast({
+      tone: 'success',
+      text: lastSeenVersion ? `App updated to ${APP_VERSION}` : `Running app version ${APP_VERSION}`,
+    });
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+  }
+
   await authStore.init();
   await settingsStore.load();
   if (authStore.isLoggedIn && navigator.onLine) {

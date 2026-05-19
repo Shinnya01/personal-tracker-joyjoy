@@ -23,6 +23,7 @@ Personal offline-first Tracker PWA.
 - App must work offline.
 - Mobile-first iPhone-style UI.
 - Keep code clean, typed, and component-based.
+- Every update must increment the app version in `package.json`.
 
 ## Commands
 - Install: npm install

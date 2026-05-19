@@ -33,6 +33,7 @@ const selectedBackupFile = ref<File | null>(null);
 const darkMode = ref<'system' | 'light' | 'dark'>('system');
 const username = ref('');
 const password = ref('');
+const appVersion = __APP_VERSION__;
 const DARK_MODE_OPTIONS = [
   { label: 'System (Default)', value: 'system' },
   { label: 'Light', value: 'light' },
@@ -283,5 +284,7 @@ const signOut = async () => {
         </div>
       </CardContent>
     </Card>
+
+    <p class="px-1 text-center text-xs font-medium text-slate-500">App Version {{ appVersion }}</p>
   </section>
 </template>
