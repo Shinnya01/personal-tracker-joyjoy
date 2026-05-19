@@ -1,27 +1,16 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { registerSW } from 'virtual:pwa-register';
 
 import App from './App.vue';
 import router from './router';
 import './style.css';
 import 'vue-sonner/style.css';
 
-if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   void navigator.serviceWorker.getRegistrations().then((registrations) => {
     registrations.forEach((registration) => {
       void registration.unregister();
     });
-  });
-}
-
-if (import.meta.env.PROD) {
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      void updateSW(true);
-    },
-    onOfflineReady() {},
   });
 }
 
@@ -30,7 +19,7 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 
-const CHUNK_RELOAD_KEY = 'tracker:pwa-chunk-reload';
+const CHUNK_RELOAD_KEY = 'tracker:chunk-reload';
 
 router.onError((error, to) => {
   const message = String((error as Error)?.message ?? error ?? '');
