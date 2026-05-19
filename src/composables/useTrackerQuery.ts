@@ -7,6 +7,8 @@ export const useTrackerQuery = (source: () => TrackerItem[]) => {
     company: 'all',
     category: 'all',
     sort: 'newest',
+    updatedAtStart: '',
+    updatedAtEnd: '',
   });
 
   const ensureFilterShape = () => {
@@ -19,7 +21,14 @@ export const useTrackerQuery = (source: () => TrackerItem[]) => {
   const filteredTrackers = computed(() => {
     ensureFilterShape();
     let items = [...source()];
-    const { search, company, category, sort } = filters.value;
+    const {
+      search,
+      company,
+      category,
+      sort,
+      updatedAtStart,
+      updatedAtEnd,
+    } = filters.value;
 
     if (search.trim()) {
       const keyword = search.toLowerCase();
@@ -34,6 +43,18 @@ export const useTrackerQuery = (source: () => TrackerItem[]) => {
     }
     if (category !== 'all') {
       items = items.filter((item) => (item.category ?? '') === category);
+    }
+    if (updatedAtStart) {
+      const start = new Date(`${updatedAtStart}T00:00:00`).getTime();
+      if (!Number.isNaN(start)) {
+        items = items.filter((item) => new Date(item.updatedAt).getTime() >= start);
+      }
+    }
+    if (updatedAtEnd) {
+      const end = new Date(`${updatedAtEnd}T23:59:59.999`).getTime();
+      if (!Number.isNaN(end)) {
+        items = items.filter((item) => new Date(item.updatedAt).getTime() <= end);
+      }
     }
 
     items.sort((a, b) => {

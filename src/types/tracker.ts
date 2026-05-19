@@ -80,6 +80,8 @@ export interface TrackerFilters {
   company: string;
   category: string;
   sort: TrackerSortMode;
+  updatedAtStart: string;
+  updatedAtEnd: string;
 }
 
 export interface ReminderBuckets {

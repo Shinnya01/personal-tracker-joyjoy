@@ -1,4 +1,3 @@
-﻿import { db } from '../db';
 import { settingsRepo } from '../db/repositories/settingsRepo';
 import { trackerRepo } from '../db/repositories/trackerRepo';
 import { activityRepo } from '../db/repositories/activityRepo';
@@ -32,25 +31,21 @@ export const ensureSeedData = async () => {
   const settings = await settingsRepo.get();
   if (settings?.seededAt) return;
 
-  await db.transaction('rw', db.settings, db.trackers, db.activities, async () => {
-    const now = nowIso();
+  const now = nowIso();
+  const existingTrackers = await trackerRepo.list();
+  if (!existingTrackers.length) {
+    await trackerRepo.bulkPut(seedTrackers());
+    await activityRepo.put({
+      id: createId(),
+      type: 'created',
+      message: 'Sample tracker data seeded.',
+      createdAt: now,
+    });
+  }
 
-    const existingTrackers = await trackerRepo.list();
-    if (!existingTrackers.length) {
-      await trackerRepo.bulkPut(seedTrackers());
-      await activityRepo.put({
-        id: createId(),
-        type: 'created',
-        message: 'Sample tracker data seeded.',
-        createdAt: now,
-      });
-    }
+  const nextSettings = settings
+    ? { ...settings, seededAt: settings.seededAt ?? now, updatedAt: now }
+    : { ...DEFAULT_SETTINGS, seededAt: now, updatedAt: now };
 
-    const nextSettings = settings
-      ? { ...settings, seededAt: settings.seededAt ?? now, updatedAt: now }
-      : { ...DEFAULT_SETTINGS, seededAt: now, updatedAt: now };
-
-    await settingsRepo.put(nextSettings);
-  });
+  await settingsRepo.put(nextSettings);
 };
-

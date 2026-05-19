@@ -9,10 +9,6 @@ import { backupService } from '../services/backupService';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useAuthStore } from '../stores/authStore';
 import { hasSupabaseConfig } from '../lib/supabase';
-import { trackerRepo } from '../db/repositories/trackerRepo';
-import { imageRepo } from '../db/repositories/imageRepo';
-import { syncQueueRepo } from '../db/repositories/syncQueueRepo';
-import { createId, nowIso } from '../utils/date';
 import Card from '../components/ui/Card.vue';
 import CardHeader from '../components/ui/CardHeader.vue';
 import CardTitle from '../components/ui/CardTitle.vue';
@@ -176,62 +172,6 @@ const signOut = async () => {
   await router.replace('/login');
 };
 
-const forceResyncAllLocalData = async () => {
-  if (!authStore.isLoggedIn) {
-    uiStore.pushToast({ tone: 'info', text: 'Login first to run re-sync.' });
-    return;
-  }
-  const ok = await uiStore.askConfirm(
-    'Force Re-sync',
-    'This will queue all local trackers and images for upload again. Continue?',
-  );
-  if (!ok) return;
-
-  const ts = nowIso();
-  try {
-    const [trackers, images] = await Promise.all([trackerRepo.list(), imageRepo.list()]);
-
-    await Promise.all([
-      ...trackers.map((tracker) =>
-        trackerRepo.put({
-          ...tracker,
-          updatedAt: tracker.updatedAt || ts,
-          syncStatus: 'pending',
-        }),
-      ),
-      ...images.map((image) =>
-        imageRepo.put({
-          ...image,
-          updatedAt: image.updatedAt ?? image.createdAt ?? ts,
-          syncStatus: 'pending',
-        }),
-      ),
-    ]);
-
-    await syncQueueRepo.bulkPut([
-      ...trackers.map((tracker) => ({
-        id: createId(),
-        entityType: 'tracker' as const,
-        entityId: tracker.id,
-        action: 'upsert' as const,
-        updatedAt: ts,
-      })),
-      ...images.map((image) => ({
-        id: createId(),
-        entityType: 'image' as const,
-        entityId: image.id,
-        action: 'upsert' as const,
-        updatedAt: ts,
-      })),
-    ]);
-
-    await syncNow();
-    uiStore.pushToast({ tone: 'success', text: 'All local data queued and re-synced.' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Force re-sync failed.';
-    uiStore.pushToast({ tone: 'error', text: message });
-  }
-};
 </script>
 
 <template>
@@ -289,20 +229,12 @@ const forceResyncAllLocalData = async () => {
 
     <Card class="rounded-3xl">
       <CardHeader>
-        <CardTitle class="flex items-center gap-2 text-lg">Cloud Sync (Supabase)</CardTitle>
-        <CardDescription class="text-sm text-slate-500">Local Dexie remains primary. Sync only runs when online and logged in.</CardDescription>
+        <CardTitle class="flex items-center gap-2 text-lg">Supabase Connection</CardTitle>
+        <CardDescription class="text-sm text-slate-500">This app now uses Supabase as the primary online database.</CardDescription>
       </CardHeader>
       <CardContent class="grid gap-3">
         <p class="text-xs text-slate-500">Config: {{ hasSupabaseConfig ? 'Ready' : 'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY' }}</p>
         <p class="text-xs text-slate-500">Status: {{ authStore.isLoggedIn ? `Logged in as ${(authStore.user?.email ?? '').split('@')[0]}` : 'Logged out' }}</p>
-        <Button
-          v-if="authStore.isLoggedIn"
-          variant="secondary"
-          :disabled="isSyncing || !hasSupabaseConfig"
-          @click="forceResyncAllLocalData"
-        >
-          Force Re-sync All Local Data
-        </Button>
         <template v-if="!authStore.isLoggedIn">
           <Input v-model="username" type="text" placeholder="Username" class="h-11 rounded-2xl text-sm" />
           <Input v-model="password" type="password" placeholder="Password" class="h-11 rounded-2xl text-sm" />

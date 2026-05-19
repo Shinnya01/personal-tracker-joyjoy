@@ -7,13 +7,23 @@ import router from './router';
 import './style.css';
 import 'vue-sonner/style.css';
 
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    void updateSW(true);
-  },
-  onOfflineReady() {},
-});
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => {
+      void registration.unregister();
+    });
+  });
+}
+
+if (import.meta.env.PROD) {
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      void updateSW(true);
+    },
+    onOfflineReady() {},
+  });
+}
 
 const app = createApp(App);
 

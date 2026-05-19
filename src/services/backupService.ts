@@ -1,4 +1,3 @@
-﻿import { db } from '../db';
 import { activityRepo } from '../db/repositories/activityRepo';
 import { imageRepo } from '../db/repositories/imageRepo';
 import { settingsRepo } from '../db/repositories/settingsRepo';
@@ -63,33 +62,28 @@ export const backupService = {
       blob: base64ToBlob(img.blobBase64, img.type),
     }));
 
-    await db.transaction('rw', [db.trackers, db.images, db.settings, db.activities], async () => {
-      if (mode === 'replace') {
-        await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
-      }
+    if (mode === 'replace') {
+      await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+    }
 
-      await trackerRepo.bulkPut(payload.trackers);
-      await imageRepo.bulkPut(images);
-      if (payload.settings) await settingsRepo.put(payload.settings);
-      await activityRepo.bulkPut([
-        ...payload.activities,
-        {
-          id: createId(),
-          type: 'backup_imported',
-          message: `Imported backup in ${mode} mode`,
-          createdAt: nowIso(),
-        },
-      ]);
-    });
+    await trackerRepo.bulkPut(payload.trackers);
+    await imageRepo.bulkPut(images);
+    if (payload.settings) await settingsRepo.put(payload.settings);
+    await activityRepo.bulkPut([
+      ...payload.activities,
+      {
+        id: createId(),
+        type: 'backup_imported',
+        message: `Imported backup in ${mode} mode`,
+        createdAt: nowIso(),
+      },
+    ]);
   },
 
   async clearAllData(resetSettings = false) {
-    await db.transaction('rw', [db.trackers, db.images, db.activities, db.settings], async () => {
-      await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
-      if (resetSettings) {
-        await settingsRepo.clear();
-      }
-    });
+    await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+    if (resetSettings) {
+      await settingsRepo.clear();
+    }
   },
 };
-
