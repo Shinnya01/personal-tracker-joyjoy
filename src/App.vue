@@ -4,12 +4,8 @@ import { Toaster } from 'vue-sonner';
 import AppLockGate from './components/common/AppLockGate.vue';
 import ConfirmDialog from './components/common/ConfirmDialog.vue';
 import ReminderAlertDialog from './components/common/ReminderAlertDialog.vue';
-import Card from './components/ui/Card.vue';
-import Button from './components/ui/Button.vue';
-import Input from './components/ui/Input.vue';
 import { useReminders } from './composables/useReminders';
 import { useInteractionRecovery } from './composables/useInteractionRecovery';
-import { acquireGlobalScrollLock, releaseGlobalScrollLock } from './composables/useGlobalScrollLock';
 import { useTrackerStore } from './stores/trackerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useAuthStore } from './stores/authStore';
@@ -20,7 +16,6 @@ const settingsStore = useSettingsStore();
 const trackerStore = useTrackerStore();
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const displayNameInput = ref('');
 const isPullRefreshing = ref(false);
 const pullStartY = ref<number | null>(null);
 const pullDistance = ref(0);
@@ -38,24 +33,9 @@ const pullIndicatorProgress = computed(() => Math.max(0, Math.min(1, pullDistanc
 const { runCheck: runReminderCheck } = useReminders();
 useInteractionRecovery();
 
-const deriveDisplayNameFromAuth = () => {
-  const email = authStore.user?.email?.trim().toLowerCase() ?? '';
-  if (!email) return '';
-  return email.split('@')[0] ?? '';
-};
-
-const ensureDisplayNameFromAuth = async () => {
-  if (!authStore.isLoggedIn || !settingsStore.isLoaded) return;
-  if (settingsStore.settings.displayName?.trim()) return;
-  const derived = deriveDisplayNameFromAuth().trim();
-  if (!derived) return;
-  await settingsStore.persist({ ...settingsStore.settings, displayName: derived });
-};
-
 onMounted(async () => {
   await authStore.init();
   await settingsStore.load();
-  await ensureDisplayNameFromAuth();
   if (authStore.isLoggedIn && navigator.onLine) {
     await syncService.syncNow();
     await trackerStore.refresh(true);
@@ -67,19 +47,6 @@ onMounted(async () => {
   window.addEventListener('touchcancel', onPullEnd, { passive: true });
 });
 
-const shouldAskName = computed(() =>
-  authStore.isLoggedIn && settingsStore.isLoaded && !settingsStore.settings.displayName?.trim(),
-);
-
-watch(
-  () => shouldAskName.value,
-  (open) => {
-    if (open) acquireGlobalScrollLock('welcome-name-dialog');
-    else releaseGlobalScrollLock('welcome-name-dialog');
-  },
-  { immediate: true },
-);
-
 watch(
   () => authStore.isLoggedIn,
   async (loggedIn) => {
@@ -88,7 +55,6 @@ watch(
       return;
     }
     await runReminderCheck();
-    await ensureDisplayNameFromAuth();
     if (!navigator.onLine) return;
     await syncService.syncNow();
     await trackerStore.refresh(true);
@@ -96,7 +62,6 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  releaseGlobalScrollLock('welcome-name-dialog');
   window.removeEventListener('online', onOnlineSync);
   window.removeEventListener('touchstart', onPullStart);
   window.removeEventListener('touchmove', onPullMove);
@@ -153,13 +118,6 @@ const onPullEnd = async () => {
   pullDistance.value = 0;
   didPullTrigger.value = false;
 };
-
-const saveName = async () => {
-  const value = displayNameInput.value.trim();
-  if (!value) return;
-  await settingsStore.persist({ ...settingsStore.settings, displayName: value });
-  displayNameInput.value = '';
-};
 </script>
 
 <template>
@@ -173,16 +131,5 @@ const saveName = async () => {
     :style="{ top: `${Math.min(16 + pullDistance * 0.22, 52)}px`, opacity: isPullRefreshing ? 1 : Math.max(0.35, pullIndicatorProgress) }"
   >
     {{ pullIndicatorText }}
-  </div>
-
-  <div v-if="shouldAskName" class="overlay" style="z-index:100">
-    <Card class="dialog">
-      <h3>Welcome to Tracker</h3>
-      <p class="muted">What name should we call you?</p>
-      <form class="form-grid" style="margin-top:.7rem;" @submit.prevent="saveName">
-        <Input v-model="displayNameInput" placeholder="Enter your name" />
-        <Button type="submit">Save</Button>
-      </form>
-    </Card>
   </div>
 </template>

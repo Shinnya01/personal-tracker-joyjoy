@@ -331,7 +331,7 @@ const onPreviewImageLoad = () => {
         </div>
       </TransitionGroup>
       <Button
-        v-if="hasMore && !filters.search.trim() && filters.company === 'all' && filters.category === 'all' && !filters.updatedAtStart && !filters.updatedAtEnd"
+        v-if="hasMore"
         variant="secondary"
         class="w-full rounded-2xl"
         :disabled="isLoadingMore"

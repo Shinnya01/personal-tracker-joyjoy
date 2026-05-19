@@ -6,6 +6,23 @@ import router from './router';
 import './style.css';
 import 'vue-sonner/style.css';
 
+const LEGACY_SW_CLEANUP_KEY = 'tracker:legacy-sw-cleanup:v1';
+
+const cleanupLegacyServiceWorkers = async () => {
+  if (!('serviceWorker' in navigator)) return;
+  if (localStorage.getItem(LEGACY_SW_CLEANUP_KEY)) return;
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((registration) => registration.unregister()));
+
+  if ('caches' in window) {
+    const cacheKeys = await caches.keys();
+    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+  }
+
+  localStorage.setItem(LEGACY_SW_CLEANUP_KEY, '1');
+};
+
 const app = createApp(App);
 
 app.use(createPinia());
@@ -32,4 +49,6 @@ router.isReady().finally(() => {
   sessionStorage.removeItem(CHUNK_RELOAD_KEY);
 });
 
-app.mount('#app');
+void cleanupLegacyServiceWorkers().finally(() => {
+  app.mount('#app');
+});
