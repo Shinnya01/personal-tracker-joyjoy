@@ -38,9 +38,24 @@ const pullIndicatorProgress = computed(() => Math.max(0, Math.min(1, pullDistanc
 const { runCheck: runReminderCheck } = useReminders();
 useInteractionRecovery();
 
+const deriveDisplayNameFromAuth = () => {
+  const email = authStore.user?.email?.trim().toLowerCase() ?? '';
+  if (!email) return '';
+  return email.split('@')[0] ?? '';
+};
+
+const ensureDisplayNameFromAuth = async () => {
+  if (!authStore.isLoggedIn || !settingsStore.isLoaded) return;
+  if (settingsStore.settings.displayName?.trim()) return;
+  const derived = deriveDisplayNameFromAuth().trim();
+  if (!derived) return;
+  await settingsStore.persist({ ...settingsStore.settings, displayName: derived });
+};
+
 onMounted(async () => {
   await authStore.init();
   await settingsStore.load();
+  await ensureDisplayNameFromAuth();
   await trackerStore.refresh();
   if (authStore.isLoggedIn && navigator.onLine) {
     await syncService.syncNow();
@@ -74,6 +89,7 @@ watch(
       return;
     }
     await runReminderCheck();
+    await ensureDisplayNameFromAuth();
     if (!navigator.onLine) return;
     await syncService.syncNow();
     await trackerStore.refresh();

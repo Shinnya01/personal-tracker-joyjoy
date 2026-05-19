@@ -51,6 +51,12 @@ export const activityRepo = {
     const client = requireSupabase();
     const userId = await requireUserId();
     const { error } = await client.from('activities').delete().eq('user_id', userId);
-    ensureNoError(error, 'Failed to clear activity logs');
+    if (error) {
+      const message = String(error.message || '').toLowerCase();
+      if (message.includes('permission denied') || message.includes('row-level security')) {
+        return;
+      }
+      ensureNoError(error, 'Failed to clear activity logs');
+    }
   },
 };
