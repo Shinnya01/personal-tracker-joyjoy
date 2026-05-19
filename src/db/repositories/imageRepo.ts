@@ -42,7 +42,6 @@ const upsertRowFor = async (item: StoredImage) => {
     name: item.name,
     type: item.type,
     size: item.size,
-    created_at: item.createdAt,
     updated_at: item.updatedAt ?? item.createdAt,
     deleted_at: item.deletedAt ?? null,
   }, { onConflict: 'id' });
