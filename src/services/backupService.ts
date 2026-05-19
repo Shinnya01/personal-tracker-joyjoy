@@ -91,7 +91,11 @@ export const backupService = {
   },
 
   async clearAllData(resetSettings = false) {
-    await Promise.all([trackerRepo.clear(), imageRepo.clear(), activityRepo.clear()]);
+    await Promise.all([
+      trackerRepo.clear(),
+      imageRepo.clear(),
+      activityRepo.clear().catch(() => undefined),
+    ]);
     if (resetSettings) {
       await settingsRepo.clear();
     }
