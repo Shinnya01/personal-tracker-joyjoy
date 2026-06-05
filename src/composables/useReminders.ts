@@ -1,8 +1,9 @@
 import { computed, onMounted, onUnmounted } from 'vue';
+import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useTrackerStore } from '../stores/trackerStore';
 import { useUiStore } from '../stores/uiStore';
-import { useAuthStore } from '../stores/authStore';
+import { getReminderCycleState, isReminderDue, monthKey } from '../utils/reminders';
 
 export const useReminders = () => {
   const settingsStore = useSettingsStore();
@@ -14,9 +15,6 @@ export const useReminders = () => {
   const onTrackerCreated = () => {
     void runCheck();
   };
-  const FIXED_DUE_DAY = 5;
-  const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
 
   const runCheck = async () => {
     if (!authStore.isLoggedIn) return;
@@ -26,26 +24,19 @@ export const useReminders = () => {
     await trackerStore.refresh();
     if (!settingsStore.settings.reminder.enabled) return;
     const nowDate = new Date();
-    const todayDay = nowDate.getDate();
-    if (todayDay < FIXED_DUE_DAY) return;
+    const cycleState = getReminderCycleState(nowDate);
+    if (cycleState === 'upcoming') return;
     const thisMonthKey = monthKey(nowDate);
-    const isLate = todayDay > FIXED_DUE_DAY;
-    const due = trackerStore.trackers.filter((item) => {
-      if (!item.deliveryReceiptDate) return false;
-      const base = new Date(item.deliveryReceiptDate);
-      if (Number.isNaN(base.getTime())) return false;
-      if (monthIndex(nowDate) <= monthIndex(base)) return false;
-      return true;
-    });
+    const due = trackerStore.trackers.filter((item) => isReminderDue(item, nowDate));
 
     for (const item of due) {
       const key = `${item.id}:${thisMonthKey}`;
       if (settingsStore.settings.dismissedReminderMonths?.[key]) continue;
 
-      const statusLabel = isLate ? 'Late Reminder' : 'Reminder Due Today';
-      const statusMessage = isLate
-        ? `${item.title} is late and should be sent.`
-        : `${item.title} should be sent today.`;
+      const statusLabel = cycleState === 'today' ? 'Reminder Due Today' : 'Late Reminder';
+      const statusMessage = cycleState === 'today'
+        ? `${item.title} should be sent today.`
+        : `${item.title} is late and should be sent.`;
       uiStore.showReminderAlert({
         title: statusLabel,
         message: statusMessage,
@@ -87,5 +78,4 @@ export const useReminders = () => {
 
   return { runCheck };
 };
-
 

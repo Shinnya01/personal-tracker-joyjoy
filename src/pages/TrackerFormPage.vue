@@ -15,6 +15,7 @@ import { imageRepo } from '../db/repositories/imageRepo';
 import { trackerService } from '../services/trackerService';
 import type { StoredImage } from '../types/tracker';
 import { useManualSync } from '../composables/useManualSync';
+import { getReminderCycleState, isReminderDue, monthKey } from '../utils/reminders';
 
 const route = useRoute();
 const router = useRouter();
@@ -35,32 +36,21 @@ onMounted(async () => {
   if (trackerId.value) existingImages.value = await imageRepo.listByTrackerId(trackerId.value);
 });
 
-const FIXED_DUE_DAY = 5;
-const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
-
 const showDueAlertsNow = () => {
   if (!settingsStore.settings.reminder.enabled) return;
 
   const nowDate = new Date();
-  const todayDay = nowDate.getDate();
-  if (todayDay < FIXED_DUE_DAY) return;
+  const cycleState = getReminderCycleState(nowDate);
+  if (cycleState === 'upcoming') return;
 
   const thisMonthKey = monthKey(nowDate);
-  const isLate = todayDay > FIXED_DUE_DAY;
-  const due = trackerStore.trackers.filter((item) => {
-    if (!item.deliveryReceiptDate) return false;
-    const base = new Date(item.deliveryReceiptDate);
-    if (Number.isNaN(base.getTime())) return false;
-    if (monthIndex(nowDate) <= monthIndex(base)) return false;
-    return true;
-  });
+  const due = trackerStore.trackers.filter((item) => isReminderDue(item, nowDate));
 
   for (const item of due) {
     const key = `${item.id}:${thisMonthKey}`;
     if (settingsStore.settings.dismissedReminderMonths?.[key]) continue;
     uiStore.showReminderAlert({
-      title: isLate ? 'Late Reminder' : 'Reminder Due Today',
+      title: cycleState === 'today' ? 'Reminder Due Today' : 'Late Reminder',
       message: 'Please take a picture and sent it',
       trackerId: item.id,
       monthKey: thisMonthKey,

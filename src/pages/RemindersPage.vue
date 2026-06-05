@@ -18,6 +18,7 @@ import { imageRepo } from '../db/repositories/imageRepo';
 import type { StoredImage, TrackerItem } from '../types/tracker';
 import { FALLBACK_IMAGE_DATA_URL } from '../utils/image';
 import { useManualSync } from '../composables/useManualSync';
+import { getReminderCycleState, isReminderDue, monthKey } from '../utils/reminders';
 
 const trackerStore = useTrackerStore();
 const settingsStore = useSettingsStore();
@@ -27,27 +28,17 @@ onMounted(async () => {
   await settingsStore.load();
   await trackerStore.refresh();
 });
-const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
-const FIXED_DUE_DAY = 5;
 const today = computed(() => new Date());
 const thisMonthKey = computed(() => monthKey(today.value));
 const isDismissed = (item: TrackerItem) => Boolean(settingsStore.settings.dismissedReminderMonths?.[`${item.id}:${thisMonthKey.value}`]);
 
 const buckets = computed(() => {
-  const day = today.value.getDate();
-  const items = trackerStore.trackers.filter((item) => {
-    if (!item.deliveryReceiptDate) return false;
-    const base = new Date(item.deliveryReceiptDate);
-    if (Number.isNaN(base.getTime())) return false;
-    if (monthIndex(today.value) <= monthIndex(base)) return false;
-    if (isDismissed(item)) return false;
-    return true;
-  });
+  const cycleState = getReminderCycleState(today.value);
+  const items = trackerStore.trackers.filter((item) => isReminderDue(item, today.value) && !isDismissed(item));
 
-  const todayList = day === FIXED_DUE_DAY ? items : [];
-  const upcoming = day < FIXED_DUE_DAY ? items : [];
-  const overdue = day > FIXED_DUE_DAY ? items : [];
+  const todayList = cycleState === 'today' ? items : [];
+  const upcoming = cycleState === 'upcoming' ? items : [];
+  const overdue = cycleState === 'overdue' ? items : [];
 
   return { today: todayList, upcoming, overdue };
 });
@@ -299,4 +290,3 @@ const onImageError = (event: Event) => {
     </Dialog>
   </section>
 </template>
-
