@@ -16,6 +16,9 @@ export const getReminderCycleState = (date = new Date()) => {
 export const isReminderDue = (item: TrackerItem, now = new Date()) => {
   if (!item.deliveryReceiptDate) return false;
   const base = new Date(item.deliveryReceiptDate);
+  const created = new Date(item.createdAt);
   if (Number.isNaN(base.getTime())) return false;
+  if (Number.isNaN(created.getTime())) return false;
+  if (monthIndex(now) !== monthIndex(created)) return false;
   return monthIndex(now) - monthIndex(base) === 1;
 };
