@@ -49,8 +49,9 @@ withDefaults(
         :align="$props.align"
         :side-offset="8"
         :align-offset="0"
-        :avoid-collisions="false"
-        class="z-[120] min-w-[var(--radix-select-trigger-width)] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[var(--shadow-soft)]"
+        :avoid-collisions="true"
+        :collision-padding="12"
+        class="z-[200] min-w-[var(--radix-select-trigger-width)] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[var(--shadow-soft)]"
       >
         <SelectViewport>
           <SelectItem
